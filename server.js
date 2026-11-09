@@ -248,14 +248,14 @@ app.put('/api/profile', (req, res) => res.json({ profile: notify.saveProfile(use
 
 // ── 마이페이지: 나의 질문기록 · 직급별 통계 · 캘린더 · 맞춤 추천 질문 · 날씨
 const readProfiles = () => { try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'profiles.json'), 'utf8')); } catch { return {}; } };
-// 시연용 계정 (seed/personas.json): 아이디·비밀번호 해시(sha256(salt+pw))와 페르소나 정보
+// 시연용 계정 (seed/personas.json): 아이디·비밀번호(텍스트)와 페르소나 정보
 const loadAccounts = () => JSON.parse(fs.readFileSync(path.join(SEED_DIR, 'personas.json'), 'utf8'));
-const publicPersona = ({ questions, calendar, salt, pwHash, ...p }) => p;
+const publicPersona = ({ questions, calendar, password, ...p }) => p;
 app.get('/api/personas', (req, res) => res.json(loadAccounts().map(publicPersona)));
 app.post('/api/login', (req, res) => {
   const { id = '', password = '' } = req.body || {};
   const acc = loadAccounts().find((a) => a.loginId === String(id).trim().toLowerCase());
-  const ok = acc && crypto.timingSafeEqual(Buffer.from(crypto.createHash('sha256').update(acc.salt + String(password)).digest('hex')), Buffer.from(acc.pwHash));
+  const ok = acc && acc.password === String(password);
   if (!ok) return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
   res.json(publicPersona(acc));
 });
