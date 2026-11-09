@@ -130,7 +130,7 @@ window.HR = (() => {
     document.body.insertAdjacentHTML('beforeend', `
       <footer class="relative z-20 w-full bg-white/95 border-t border-slate-200/80 py-6 mt-auto">
         <div class="max-w-[1600px] mx-auto px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div class="flex items-center gap-3">${logo('h-5 opacity-80')}<span class="text-xs font-bold text-slate-700">KT IS 인사해삐 (HR Happy AI) 노무·인사 지원 포털</span></div>
+          <div class="flex items-center gap-3">${logo('h-5')}<span class="text-xs font-bold text-slate-700">KT IS 인사해삐 (HR Happy AI) 노무·인사 지원 포털</span></div>
           <div class="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 font-medium">
             <a class="text-[#E60012] font-bold hover:underline" href="#">개인정보처리방침</a><span>·</span>
             <a class="hover:text-[#E60012]" href="#">정보보안 규정</a><span>·</span>

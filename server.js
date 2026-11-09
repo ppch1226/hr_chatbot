@@ -247,10 +247,16 @@ app.put('/api/profile', (req, res) => res.json({ profile: notify.saveProfile(use
 
 // ── 마이페이지: 나의 질문기록 · 직급별 통계 · 캘린더 · 맞춤 추천 질문 · 날씨
 const readProfiles = () => { try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'profiles.json'), 'utf8')); } catch { return {}; } };
-// 시연용 테스트 계정 (seed/personas.json). 질문 목록 등은 빼고 화면 표시용 정보만
-app.get('/api/personas', (req, res) => {
-  const list = JSON.parse(fs.readFileSync(path.join(SEED_DIR, 'personas.json'), 'utf8'));
-  res.json(list.map(({ questions, calendar, ...p }) => p));
+// 시연용 계정 (seed/personas.json): 아이디·비밀번호 해시(sha256(salt+pw))와 페르소나 정보
+const loadAccounts = () => JSON.parse(fs.readFileSync(path.join(SEED_DIR, 'personas.json'), 'utf8'));
+const publicPersona = ({ questions, calendar, salt, pwHash, ...p }) => p;
+app.get('/api/personas', (req, res) => res.json(loadAccounts().map(publicPersona)));
+app.post('/api/login', (req, res) => {
+  const { id = '', password = '' } = req.body || {};
+  const acc = loadAccounts().find((a) => a.loginId === String(id).trim().toLowerCase());
+  const ok = acc && crypto.timingSafeEqual(Buffer.from(crypto.createHash('sha256').update(acc.salt + String(password)).digest('hex')), Buffer.from(acc.pwHash));
+  if (!ok) return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
+  res.json(publicPersona(acc));
 });
 app.get('/api/history', (req, res) => res.json({ items: userdata.getHistory(userKey(req.query)), categories: userdata.CATEGORIES }));
 app.delete('/api/history/:id', (req, res) => { userdata.deleteHistory(userKey(req.query), req.params.id); res.json({ ok: true }); });
