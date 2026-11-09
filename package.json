@@ -9,7 +9,8 @@
     "ingest": "node rag/ingest.js",
     "eval": "node rag/eval.js",
     "test:sensitive": "node rag/test-sensitive.js",
-    "ingest:laws": "node rag/lawsources.js ingest"
+    "ingest:laws": "node rag/lawsources.js ingest",
+    "seed:demo": "node rag/seed-demo.js"
   },
   "engines": {
     "node": ">=18"

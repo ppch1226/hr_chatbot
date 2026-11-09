@@ -44,6 +44,11 @@
         </div>
         <p class="text-[11px] text-slate-400 text-center mt-4">해커톤 시연용 로그인입니다. 사내 SSO 연동 시 역할이 자동 지정됩니다.</p>
       </div>
+      <!-- 시연용 테스트 계정 -->
+      <div id="personas" class="hidden pt-5 border-t border-slate-100">
+        <div class="flex items-center justify-between mb-3"><span class="text-sm font-bold text-slate-900">테스트 계정으로 바로 시작</span><span class="text-[11px] text-slate-400">비밀번호 없이 로그인</span></div>
+        <div id="persona-list" class="space-y-2.5"></div>
+      </div>
     </form>
   </div>
 </main>
@@ -67,6 +72,35 @@
   }
   tabs.forEach((t) => t.addEventListener('click', () => { role = t.dataset.role; paint(); }));
   paint();
+  // 테스트 계정: 질문기록·알림 설정·일정이 미리 채워진 페르소나
+  HR.api('/api/personas').then((list) => {
+    if (!list.length) return;
+    document.getElementById('personas').classList.remove('hidden');
+    const box = document.getElementById('persona-list');
+    box.innerHTML = list.map((p, i) => `
+      <button type="button" data-i="${i}" class="w-full text-left flex items-start gap-3 p-3 rounded-2xl border border-slate-200 hover:border-red-300 hover:bg-red-50/30 transition-all">
+        <img src="${p.char === 'rabbit' ? (p.role === 'admin' ? '/img/chars/rabbit-m.webp' : '/img/chars/rabbit.webp') : '/img/chars/' + p.char + '.webp'}" alt="" class="w-12 h-12 object-contain shrink-0">
+        <span class="min-w-0 flex-1">
+          <span class="flex flex-wrap items-center gap-1.5"><span class="text-sm font-extrabold text-slate-900">${HR.esc(p.name)}</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${p.role === 'admin' ? 'bg-slate-900 text-white' : 'bg-red-50 text-[#E60012] border border-red-100'}">${p.role === 'admin' ? '인사담당자용' : '직원용'}</span>
+            <span class="text-[11px] text-slate-500">${HR.esc(p.title)} · ${HR.esc(p.dept)}</span></span>
+          <span class="block text-xs text-slate-600 mt-1 leading-relaxed break-keep">${HR.esc(p.summary)}</span>
+          <span class="flex flex-wrap gap-1 mt-1.5">${p.tryThis.map((t) => `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold">${HR.esc(t)}</span>`).join('')}</span>
+        </span>
+        <span class="material-symbols-outlined text-slate-300 self-center">arrow_forward</span>
+      </button>`).join('');
+    box.querySelectorAll('[data-i]').forEach((b) => (b.onclick = () => {
+      const p = list[b.dataset.i];
+      HR.login(p.role, p.name);
+      // 처음 로그인할 때만 캐릭터·최근 질문 주제를 페르소나 값으로 채움 (이후 변경은 유지)
+      const ck = `hrhappy.char.${p.role}.${p.name}`, rk = `hrhappy.recentTopics.${p.role}.${p.name}`;
+      try {
+        if (!localStorage.getItem(ck)) localStorage.setItem(ck, p.char);
+        if (!localStorage.getItem(rk)) localStorage.setItem(rk, JSON.stringify(p.recentTopics));
+      } catch {}
+      location.href = '/chat.html';
+    }));
+  }).catch(() => {});
   document.getElementById('login').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('uid').value.trim() || 'OO';
