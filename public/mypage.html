@@ -405,15 +405,16 @@ if (HR.guard()) {
   $('char-open').onclick = openChars; $('avatar-btn').onclick = openChars;
 
   // 빠른 이동
+  // 빠른 이동: 비슷한 항목끼리 묶고 그룹 사이를 선으로 구분 (담당자 전용 항목은 직원에게 숨김)
   const VIEWS = [
-    { id: 'calendar', icon: 'calendar_month', label: '일정', title: '사내 일정 & 근태 캘린더' },
-    { id: 'history', icon: 'history_edu', label: '나의 질문기록', title: '나의 질문기록' },
-    { id: 'stats', icon: 'bar_chart', label: '직급별 질문 통계', title: '직급별 질문 통계' },
-    ...(admin ? [{ id: 'compliance', icon: 'gavel', label: '정합성 분석 기록', title: '정합성 분석 기록' }] : []),
-    { id: 'notif', icon: 'notifications', label: '사규 개정 알림', href: '/notifications.html' },
-    ...(admin ? [{ id: 'cm', icon: 'verified_user', label: '컴플라이언스 관리', href: '/compliance.html' }] : []),
-    { id: 'prefs', icon: 'tune', label: '알림 맞춤 설정', title: '알림 맞춤 설정' },
-    { id: 'privacy', icon: 'lock', label: '개인정보 동의 관리', title: '개인정보 동의 관리' },
+    { group: '', id: 'calendar', icon: 'calendar_month', label: '일정', title: '사내 일정 & 근태 캘린더' },
+    { group: '기록', id: 'history', icon: 'history_edu', label: '나의 질문기록', title: '나의 질문기록' },
+    ...(admin ? [{ group: '기록', id: 'compliance', icon: 'gavel', label: '정합성 분석 기록', title: '정합성 분석 기록' }] : []),
+    { group: '통계', id: 'stats', icon: 'bar_chart', label: '직급별 질문 통계', title: '직급별 질문 통계' },
+    { group: '알림', id: 'notif', icon: 'notifications', label: '사규 개정 알림', href: '/notifications.html' },
+    { group: '알림', id: 'prefs', icon: 'tune', label: '알림 맞춤 설정', title: '알림 맞춤 설정' },
+    ...(admin ? [{ group: '관리', id: 'cm', icon: 'verified_user', label: '컴플라이언스 관리', href: '/compliance.html' }] : []),
+    { group: '관리', id: 'privacy', icon: 'lock', label: '개인정보 동의 관리', title: '개인정보 동의 관리' },
   ];
   const navBadge = {};
   function initNav() {
@@ -425,9 +426,11 @@ if (HR.guard()) {
   }
   function renderNav() {
     const cur = current();
-    $('quick-nav').innerHTML = VIEWS.map((v) => {
+    $('quick-nav').innerHTML = VIEWS.map((v, i) => {
       const on = v.id === cur;
-      return `<a href="${v.href || '#' + v.id}" class="flex items-center justify-between pl-4 pr-3 py-2.5 rounded-xl text-[13px] font-bold border-l-4 transition-all ${on ? 'bg-red-50/70 text-slate-900 border-[#E60012]' : 'text-slate-700 hover:bg-slate-50 border-transparent'}">
+      const head = i > 0 && v.group !== VIEWS[i - 1].group
+        ? `<div class="mx-3 mt-2.5 mb-1.5 pt-3 border-t border-slate-100 text-[10.5px] font-bold tracking-wider text-slate-400">${v.group}</div>` : '';
+      return head + `<a href="${v.href || '#' + v.id}" class="flex items-center justify-between pl-4 pr-3 py-2.5 rounded-xl text-[13px] font-bold border-l-4 transition-all ${on ? 'bg-red-50/70 text-slate-900 border-[#E60012]' : 'text-slate-700 hover:bg-slate-50 border-transparent'}">
         <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px] ${on ? 'text-[#E60012]' : 'text-slate-400'}">${v.icon}</span>${v.label}${v.href ? '<span class="material-symbols-outlined text-[13px] text-slate-300">open_in_new</span>' : ''}</span>${navBadge[v.id] || ''}</a>`;
     }).join('');
   }
