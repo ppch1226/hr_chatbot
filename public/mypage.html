@@ -718,7 +718,7 @@ if (HR.guard()) {
 
   // ─────────────── 사규 개정 알림
   let ntItems = [], ntTab = 'related', ntOpen = null;
-  const CHG = { 신설: 'bg-emerald-600', 변경: 'bg-blue-600', 삭제: 'bg-slate-500' };
+  const CHG = { 신설: 'bg-emerald-600', 변경: 'bg-slate-700', 삭제: 'bg-[#E60012]' };
   function wordDiff(a, b) {
     const A = String(a).split(/(\s+)/), B = String(b).split(/(\s+)/);
     if (A.length * B.length > 600000) return '<del>' + HR.esc(a) + '</del><br><ins>' + HR.esc(b) + '</ins>';
@@ -750,12 +750,11 @@ if (HR.guard()) {
       const k = HR.KIND[x.kind] || HR.KIND['reg-change'], on = x.id === ntOpen, changes = x.changes || [];
       return `<article class="rounded-2xl border ${on ? 'border-red-200' : 'border-slate-200'} bg-white overflow-hidden">
         <button type="button" data-id="${HR.esc(x.id)}" class="w-full text-left p-4 flex items-start gap-3 hover:bg-slate-50/70">
-          <span class="w-9 h-9 rounded-xl ${k.color} flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[19px]">${k.icon}</span></span>
+          <span class="w-9 h-9 rounded-xl bg-red-50 text-[#E60012] flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[19px]">${k.icon}</span></span>
           <span class="min-w-0 flex-1">
             <span class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400"><span class="font-bold text-slate-500">${k.label}</span>·<span>${HR.esc(String(x.createdAt).slice(0, 10))}</span>
-              ${x.effective ? `<span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold">시행 ${HR.esc(x.effective)}</span>` : ''}${x.read ? '' : '<span class="w-1.5 h-1.5 rounded-full bg-[#E60012]"></span>'}</span>
+              ${x.revised || x.promulgated ? `<span>개정 ${HR.esc(x.revised || x.promulgated)}</span>` : ''}${x.read ? '' : '<span class="w-1.5 h-1.5 rounded-full bg-[#E60012]"></span>'}</span>
             <span class="block text-sm font-bold text-slate-900 mt-0.5 break-keep">${HR.esc(x.title)}</span>
-            ${x.related && (x.reasons || []).length ? `<span class="flex flex-wrap gap-1 mt-1.5">${x.reasons.slice(0, 4).map((r) => `<span class="px-1.5 py-0.5 rounded bg-red-50 text-[#E60012] text-[10.5px] font-semibold">${HR.esc(r)}</span>`).join('')}</span>` : ''}
           </span>
           <span class="material-symbols-outlined text-slate-400 transition-transform ${on ? 'rotate-180' : ''}">expand_more</span>
         </button>
@@ -763,13 +762,12 @@ if (HR.guard()) {
           ${x.summary ? `<p class="text-[13px] text-slate-600 leading-relaxed break-keep">${HR.esc(x.summary)}</p>` : ''}
           ${changes.map((c) => `<div class="rounded-xl border ${(c.reasons || []).length ? 'border-red-200 bg-red-50/20' : 'border-slate-200'} p-3.5 space-y-2">
             <div class="flex flex-wrap items-center gap-1.5"><span class="px-1.5 py-0.5 rounded ${CHG[c.change] || 'bg-slate-500'} text-white text-[10.5px] font-bold">${HR.esc(c.change)}</span>
-              <span class="text-[13px] font-extrabold text-slate-900">${HR.esc(c.label)}</span>
-              ${(c.reasons || []).map((r) => `<span class="px-1.5 py-0.5 rounded bg-red-50 text-[#E60012] text-[10px] font-bold">${HR.esc(r)}</span>`).join('')}</div>
+              <span class="text-[13px] font-extrabold text-slate-900">${HR.esc(c.label)}</span></div>
             <p class="text-[13px] text-slate-800 leading-relaxed break-keep">${HR.esc(c.summary || '')}</p>
             ${c.before != null || c.after != null ? `<details class="group rounded-lg bg-slate-50 border border-slate-200"><summary class="cursor-pointer list-none px-3 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1"><span class="material-symbols-outlined text-[15px] transition-transform group-open:rotate-90">chevron_right</span>이전 → 현행 비교
               <span class="ml-1 font-normal text-[10px]"><span class="px-1 rounded bg-red-100 text-red-800">삭제</span> <span class="px-1 rounded bg-green-100 text-green-800">추가</span></span></summary>
               <div class="diff px-3 pb-3 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">${c.change === '신설' ? '<ins>' + HR.esc(c.after) + '</ins>' : c.change === '삭제' ? '<del>' + HR.esc(c.before) + '</del>' : wordDiff(c.before || '', c.after || '')}</div></details>` : ''}
-            <a href="/chat.html?q=${encodeURIComponent((x.docLabel || '') + ' ' + c.label + ' 개정 내용이 나한테 어떤 영향이 있어?')}" class="inline-flex items-center gap-1 text-[11px] font-bold text-[#E60012] hover:underline"><span class="material-symbols-outlined text-[15px]">forum</span>이 조문에 대해 물어보기</a>
+            <a href="/chat.html?q=${encodeURIComponent((x.docLabel || '') + ' ' + c.label + ' 개정 내용이 나한테 어떤 영향이 있어?')}" class="inline-flex items-center gap-1 text-[11px] font-normal text-[#E60012] hover:underline"><span class="material-symbols-outlined text-[15px]">forum</span>이 조문에 대해 물어보기</a>
           </div>`).join('')}
           ${x.link && !changes.length ? `<a href="${HR.esc(x.link)}" class="inline-flex px-3.5 py-2 rounded-lg bg-[#111827] hover:bg-[#E60012] text-white text-xs font-bold">${x.kind === 'law-change' ? '정합성 분석하러 가기' : '바로가기'}</a>` : ''}
         </div>` : ''}
