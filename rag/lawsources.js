@@ -45,11 +45,11 @@ const KIND = { law: '법령', prec: '판례', admrul: '행정규칙', moelCgmExp
 
 // ── 공통: API 호출 (키는 서버에서만 사용, 화면에 노출하지 않음)
 const memo = new Map(); // 같은 요청 재사용 (최대 500개)
-async function api(kind, params, { timeoutMs = 8000 } = {}) {
+async function api(kind, params, { timeoutMs = 8000, fresh = false } = {}) {
   if (!OC()) throw new Error('LAW_OC 미설정');
   const qs = new URLSearchParams({ OC: OC(), type: 'JSON', ...params }).toString();
   const url = `${B}/${kind}.do?${qs}`;
-  if (memo.has(url)) return memo.get(url);
+  if (!fresh && memo.has(url)) return memo.get(url);
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -85,6 +85,13 @@ function articleText(u) {
     }
   }
   return parts.join('\n').trim();
+}
+
+/** 현행 법령 버전 (법령일련번호가 바뀌면 개정된 것) */
+async function lawVersion(name) {
+  const found = listOf(await api('lawSearch', { target: 'law', query: name, display: '20' }, { fresh: true })).find((x) => x['법령명한글'] === name);
+  if (!found) return null;
+  return { mst: String(found['법령일련번호']), promulgated: ymd(found['공포일자']), effective: ymd(found['시행일자']), revision: found['제개정구분명'] || '' };
 }
 
 async function fetchLawArticles(name) {
@@ -360,7 +367,7 @@ async function status() {
   return { configured: !!OC(), lawArticles: info ? info.points : 0 };
 }
 
-module.exports = { gather, gatherCases, ingestLaws, searchLaws, status, ruleKeywords, llmKeywords, LAWS, LAW_COLLECTION, KIND };
+module.exports = { gather, gatherCases, lawVersion, ingestLaws, searchLaws, status, ruleKeywords, llmKeywords, LAWS, LAW_COLLECTION, KIND };
 
 // CLI: node rag/lawsources.js ingest
 if (require.main === module && process.argv[2] === 'ingest') {

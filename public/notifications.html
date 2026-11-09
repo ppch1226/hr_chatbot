@@ -1,0 +1,207 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/vendor/pretendard/pretendard.css">
+<link rel="stylesheet" href="/vendor/symbols/outlined.css">
+<link rel="stylesheet" href="/css/app.css">
+<script src="/vendor/tailwind/index.global.js"></script>
+<script src="/vendor/marked/marked.min.js"></script>
+<script src="/vendor/dompurify/purify.min.js"></script>
+<script src="/js/common.js"></script>
+<title>알림 - KT IS 인사해삐</title>
+<style>
+  .diff ins { background: #dcfce7; color: #14532d; text-decoration: none; border-radius: 3px; padding: 0 1px; }
+  .diff del { background: #fee2e2; color: #7f1d1d; border-radius: 3px; padding: 0 1px; }
+</style>
+</head>
+<body class="min-h-screen flex flex-col relative">
+<main class="relative z-20 flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl sm:text-[28px] font-extrabold text-slate-900 tracking-tight flex items-center gap-2"><span class="material-symbols-outlined text-[30px] text-[#E60012]">notifications</span>알림</h1>
+      <p class="text-sm text-slate-500 mt-1">규정이 바뀌면 바뀐 조문과 나에게 미치는 영향을 알려드려요. <a href="/mypage.html#prefs" class="text-[#E60012] font-semibold underline">알림 맞춤 설정</a></p>
+    </div>
+    <button id="read-all" class="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:text-[#E60012] hover:border-red-200">모두 읽음으로 표시</button>
+  </div>
+
+  <!-- 담당자: 개정 확인 도구 -->
+  <section id="admin-tools" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="text-sm font-extrabold text-slate-900 flex items-center gap-1.5"><span class="material-symbols-outlined text-[20px] text-[#E60012]">manage_search</span>개정 확인 (인사담당자)</h2>
+      <span id="sched" class="text-[11px] text-slate-500"></span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+        <div class="text-xs font-bold text-slate-800">사규</div>
+        <div id="st-regs" class="text-[11px] text-slate-500 min-h-[32px]"></div>
+        <button data-check="regs" class="chk w-full py-2 rounded-lg bg-[#111827] hover:bg-[#E60012] text-white text-xs font-bold">사규 지금 확인</button>
+      </div>
+      <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+        <div class="text-xs font-bold text-slate-800">관련 법령 (노동법 16개)</div>
+        <div id="st-laws" class="text-[11px] text-slate-500 min-h-[32px]"></div>
+        <button data-check="laws" class="chk w-full py-2 rounded-lg bg-[#111827] hover:bg-[#E60012] text-white text-xs font-bold">법령 지금 확인</button>
+      </div>
+      <label class="rounded-xl border-2 border-dashed border-slate-300 hover:border-[#E60012] p-4 space-y-2 cursor-pointer block">
+        <div class="text-xs font-bold text-slate-800 flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">upload_file</span>새 개정본 올리기</div>
+        <div class="text-[11px] text-slate-500 leading-relaxed">HWP/HWPX · 파일명에 개정일 포함<br>예: 인사관리규정(2026년도 12월 1일 개정).hwp</div>
+        <input id="upload" type="file" accept=".hwp,.hwpx" class="hidden">
+        <div id="up-state" class="text-[11px] font-semibold text-[#E60012]"></div>
+      </label>
+    </div>
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <aside class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden lg:sticky lg:top-6">
+      <div id="tabs" class="flex border-b border-slate-100"></div>
+      <div id="list" class="max-h-[70vh] overflow-y-auto divide-y divide-slate-100"></div>
+    </aside>
+    <section id="detail" class="lg:col-span-8 space-y-4"></section>
+  </div>
+</main>
+
+<script>
+if (HR.guard()) {
+  HR.layout('/notifications.html');
+  const admin = HR.isAdmin();
+  const who = { user: HR.name(), role: admin ? 'admin' : 'employee' };
+  let data = { items: [] }, tab = 'related', current = new URLSearchParams(location.search).get('id');
+
+  async function load() {
+    data = await HR.api(`/api/notifications?user=${encodeURIComponent(who.user)}&role=${who.role}&recent=${encodeURIComponent(HR.recentTopics().join(','))}`);
+    if (!current) current = (data.items.find((x) => x.related) || data.items[0] || {}).id;
+    if (current && !data.items.some((x) => x.id === current && x.related)) tab = 'all';
+    renderList(); renderDetail();
+  }
+
+  function renderList() {
+    const rel = data.items.filter((x) => x.related);
+    const list = tab === 'related' ? rel : data.items;
+    const t = (k, label, n) => `<button data-tab="${k}" class="flex-1 py-3 text-sm font-bold border-b-2 ${tab === k ? 'border-[#E60012] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-700'}">${label} <span class="text-xs ${tab === k ? 'text-[#E60012]' : ''}">${n}</span></button>`;
+    document.getElementById('tabs').innerHTML = t('related', '나와 관련', rel.length) + t('all', '전체', data.items.length);
+    document.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; renderList(); }));
+    document.getElementById('list').innerHTML = list.map((x) => {
+      const k = HR.KIND[x.kind] || HR.KIND['reg-change'];
+      return `<button data-id="${HR.esc(x.id)}" class="item w-full text-left flex gap-3 px-4 py-3.5 ${x.id === current ? 'bg-red-50/60' : 'hover:bg-slate-50'}">
+        <span class="w-9 h-9 rounded-xl ${k.color} flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[20px]">${k.icon}</span></span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-1.5 text-[11px] text-slate-400"><b>${k.label}</b> · ${HR.esc(String(x.createdAt).slice(0, 16))} ${x.read ? '' : '<span class="w-1.5 h-1.5 rounded-full bg-[#E60012]"></span>'}</span>
+          <span class="block text-sm font-bold text-slate-900 leading-snug mt-0.5 ${x.read ? 'text-slate-500' : ''}">${HR.esc(x.title)}</span>
+          ${x.related && x.reasons && x.reasons.length ? `<span class="flex flex-wrap gap-1 mt-1.5">${x.reasons.slice(0, 3).map((r) => `<span class="px-1.5 py-0.5 rounded bg-red-50 text-[#E60012] text-[10px] font-semibold">${HR.esc(r)}</span>`).join('')}</span>` : ''}
+        </span></button>`;
+    }).join('') || `<div class="px-4 py-12 text-center text-sm text-slate-400">${tab === 'related' ? '나와 관련된 알림이 없어요.<br><a href="/mypage.html#prefs" class="text-[#E60012] font-semibold underline">알림 맞춤 설정</a>을 하면 더 정확해져요.' : '알림이 없어요.'}</div>`;
+    document.querySelectorAll('#list .item').forEach((b) => (b.onclick = () => {
+      current = b.dataset.id;
+      const it = data.items.find((x) => x.id === current);
+      if (it && it.kind === 'risk') return (location.href = it.link);
+      history.replaceState(null, '', '/notifications.html?id=' + encodeURIComponent(current));
+      renderList(); renderDetail();
+    }));
+  }
+
+  // 단어 단위 비교 (LCS) → <del>/<ins>
+  function wordDiff(a, b) {
+    const A = String(a).split(/(\s+)/), B = String(b).split(/(\s+)/);
+    if (A.length * B.length > 600000) return `<del>${HR.esc(a)}</del><br><ins>${HR.esc(b)}</ins>`;
+    const n = A.length, m = B.length, dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    let i = 0, j = 0, out = '';
+    while (i < n && j < m) {
+      if (A[i] === B[j]) { out += HR.esc(A[i]); i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) { out += /^\s+$/.test(A[i]) ? A[i] : `<del>${HR.esc(A[i])}</del>`; i++; }
+      else { out += /^\s+$/.test(B[j]) ? B[j] : `<ins>${HR.esc(B[j])}</ins>`; j++; }
+    }
+    while (i < n) out += /^\s+$/.test(A[i]) ? A[i++] : `<del>${HR.esc(A[i++])}</del>`;
+    while (j < m) out += /^\s+$/.test(B[j]) ? B[j++] : `<ins>${HR.esc(B[j++])}</ins>`;
+    return out.replace(/<\/del><del>/g, '').replace(/<\/ins><ins>/g, '');
+  }
+  const CHANGE = { 신설: 'bg-emerald-600', 변경: 'bg-[#0050CC]', 삭제: 'bg-slate-500' };
+  const tagChips = (t) => [...(t.grades || []), ...(t.positions || []), ...(t.locations || []), ...(t.topics || []), ...(t.situations || [])]
+    .map((x) => `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold">${HR.esc(x)}</span>`).join('');
+
+  function renderDetail() {
+    const x = data.items.find((n) => n.id === current);
+    const box = document.getElementById('detail');
+    if (!x) return (box.innerHTML = '<div class="bg-white rounded-2xl border border-slate-200 p-10 text-center text-sm text-slate-400">왼쪽에서 알림을 선택하세요.</div>');
+    if (!x.read) {
+      HR.api('/api/notifications/read', { method: 'POST', body: { ...who, ids: [x.id] } }).then(() => { x.read = true; renderList(); HR.refreshBell(); }).catch(() => {});
+    }
+    const k = HR.KIND[x.kind] || HR.KIND['reg-change'];
+    const changes = x.changes || [];
+    const relCount = changes.filter((c) => c.reasons && c.reasons.length).length;
+    box.innerHTML = `
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-7 space-y-4">
+        <div class="flex items-center gap-2 text-xs"><span class="px-2 py-0.5 rounded-md ${k.color} font-bold">${k.label}</span><span class="text-slate-400">${HR.esc(x.createdAt)}${x.source ? ' · ' + HR.esc(x.source) : ''}</span></div>
+        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 leading-snug">${HR.esc(x.title)}</h2>
+        <div class="flex flex-wrap gap-2 text-xs">
+          ${x.revised ? `<span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">개정 <b>${HR.esc(x.revised)}</b></span>` : ''}
+          ${x.effective ? `<span class="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">시행 <b>${HR.esc(x.effective)}</b></span>` : ''}
+          ${x.promulgated ? `<span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">공포 <b>${HR.esc(x.promulgated)}</b></span>` : ''}
+        </div>
+        ${x.related && x.reasons && x.reasons.length ? `<div class="rounded-xl bg-red-50/70 border border-red-200 p-3.5 text-sm text-slate-800"><b class="text-[#E60012]">나와 관련된 이유</b> · ${x.reasons.map(HR.esc).join(', ')}${changes.length ? ` · 관련 조문 <b>${relCount}</b>개 / 전체 ${changes.length}개` : ''}</div>` : ''}
+        ${x.summary ? `<p class="text-sm text-slate-600 leading-relaxed">${HR.esc(x.summary)}</p>` : ''}
+        <div class="flex flex-wrap gap-2">
+          ${x.link ? `<a href="${HR.esc(x.link)}" class="px-3.5 py-2 rounded-lg bg-[#111827] hover:bg-[#E60012] text-white text-xs font-bold">${x.kind === 'law-change' ? '정합성 분석하러 가기' : '바로가기'}</a>` : ''}
+          ${x.docLabel ? `<a href="/chat.html?q=${encodeURIComponent(x.docLabel + '에서 이번에 바뀐 내용을 정리해줘')}" class="px-3.5 py-2 rounded-lg border border-slate-200 hover:border-red-200 hover:text-[#E60012] text-xs font-bold text-slate-700 inline-flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">smart_toy</span>${HR.esc(HR.botName())}에게 물어보기</a>` : ''}
+        </div>
+      </div>
+      ${changes.map((c, i) => `
+        <article class="bg-white rounded-2xl border ${c.reasons && c.reasons.length ? 'border-red-200 ring-1 ring-red-100' : 'border-slate-200'} shadow-sm p-5 space-y-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2 py-0.5 rounded-md ${CHANGE[c.change] || 'bg-slate-500'} text-white text-[11px] font-bold">${HR.esc(c.change)}</span>
+            <h3 class="text-sm sm:text-base font-extrabold text-slate-900">${HR.esc(c.label)}</h3>
+            ${(c.reasons || []).map((r) => `<span class="px-1.5 py-0.5 rounded bg-red-50 text-[#E60012] text-[10px] font-bold">${HR.esc(r)}</span>`).join('')}
+          </div>
+          <p class="text-sm text-slate-800 leading-relaxed">${HR.esc(c.summary)}</p>
+          <div class="flex flex-wrap gap-1">${tagChips(c.tags || {})}</div>
+          <details ${i === 0 ? 'open' : ''} class="group rounded-xl border border-slate-200 bg-slate-50/60">
+            <summary class="cursor-pointer list-none px-3.5 py-2.5 text-xs font-bold text-slate-600 flex items-center gap-1"><span class="material-symbols-outlined text-[16px] transition-transform group-open:rotate-90">chevron_right</span>이전 → 현행 비교
+              <span class="ml-2 font-normal text-[10px] text-slate-400"><span class="px-1 rounded bg-red-100 text-red-800">삭제</span> <span class="px-1 rounded bg-green-100 text-green-800">추가</span></span></summary>
+            <div class="diff px-4 pb-4 text-xs sm:text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">${c.change === '신설' ? `<ins>${HR.esc(c.after)}</ins>` : c.change === '삭제' ? `<del>${HR.esc(c.before)}</del>` : wordDiff(c.before, c.after)}</div>
+          </details>
+          <a href="/chat.html?q=${encodeURIComponent((x.docLabel || '') + ' ' + c.label + ' 개정 내용이 나한테 어떤 영향이 있어?')}" class="inline-flex items-center gap-1 text-xs font-bold text-[#E60012] hover:underline"><span class="material-symbols-outlined text-[16px]">forum</span>이 조문에 대해 물어보기</a>
+        </article>`).join('')}`;
+  }
+
+  document.getElementById('read-all').onclick = async () => {
+    await HR.api('/api/notifications/read', { method: 'POST', body: { ...who, all: true } });
+    await load(); HR.refreshBell();
+  };
+
+  // ── 담당자 도구
+  async function loadStatus() {
+    const s = await HR.api('/api/notify/status');
+    document.getElementById('sched').textContent = `정기 확인: 사규 ${s.schedule.regs} · 법령 ${s.schedule.laws}${s.schedule.enabled ? '' : ' (꺼짐)'}${s.running ? ` · 지금 ${s.running === 'laws' ? '법령' : '사규'} 확인 중…` : ''}`;
+    document.getElementById('st-regs').innerHTML = `마지막 확인 ${HR.esc(s.last.regs || '-')} (${HR.esc(s.last.regsResult || '-')})<br>다음 확인 ${HR.esc(s.next.regs)}`;
+    document.getElementById('st-laws').innerHTML = `마지막 확인 ${HR.esc(s.last.laws || '-')} (${HR.esc(s.last.lawsResult || '-')})<br>다음 확인 ${HR.esc(s.next.laws)}`;
+  }
+  if (admin) {
+    document.getElementById('admin-tools').classList.remove('hidden');
+    loadStatus().catch(() => {});
+    document.querySelectorAll('.chk').forEach((b) => (b.onclick = async () => {
+      const label = b.textContent; b.disabled = true; b.textContent = '확인 중…';
+      try {
+        const r = await HR.api('/api/notify/check', { method: 'POST', body: { what: b.dataset.check } });
+        HR.toast(r.created ? `새 알림 ${r.created}건이 만들어졌어요.` : '바뀐 내용이 없어요.');
+        await load(); HR.refreshBell();
+      } catch (e) { HR.toast(e.message); }
+      b.disabled = false; b.textContent = label; loadStatus().catch(() => {});
+    }));
+    document.getElementById('upload').onchange = async (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      const st = document.getElementById('up-state');
+      st.textContent = `${f.name} 올리는 중… (재색인과 비교에 1~2분 걸릴 수 있어요)`;
+      try {
+        const r = await fetch('/api/regulations/upload', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(f.name) }, body: await f.arrayBuffer() });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || '업로드 실패');
+        st.textContent = j.queued ? j.message : `반영 완료 · 새 알림 ${j.created}건`;
+        await load(); HR.refreshBell();
+      } catch (err) { st.textContent = err.message; }
+      e.target.value = ''; loadStatus().catch(() => {});
+    };
+  }
+
+  load().catch((e) => (document.getElementById('detail').innerHTML = `<div class="bg-red-50 border border-red-200 rounded-2xl p-5 text-sm text-red-700">${HR.esc(e.message)}</div>`));
+}
+</script>
+</body></html>

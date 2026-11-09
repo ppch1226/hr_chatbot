@@ -36,6 +36,8 @@ const qdrant = require('./rag/qdrant');
 const models = require('./rag/models');
 const sensitive = require('./rag/sensitive');
 const lawsources = require('./rag/lawsources');
+const notify = require('./rag/notify');
+const scheduler = require('./rag/scheduler');
 
 // ── JSON 저장소
 const DATA_DIR = path.join(ROOT, 'data');
@@ -205,6 +207,69 @@ app.get('/api/feedback', (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════
+// API: 사내 알림 · 프로필 · 사규 업로드
+// ════════════════════════════════════════════════════════════════
+// 시연 환경의 사용자 식별: 역할 + 이름 (실서비스에서는 사내 SSO 사번으로 대체)
+const userKey = (q) => `${q.role === 'admin' ? 'admin' : 'employee'}:${String(q.user || 'OO').slice(0, 40)}`;
+
+app.get('/api/notifications', (req, res) => {
+  const role = req.query.role === 'admin' ? 'admin' : 'employee';
+  const recentTopics = String(req.query.recent || '').split(',').filter(Boolean).slice(0, 20);
+  let items = notify.listFor(userKey(req.query), role, { recentTopics });
+  if (role === 'admin') {
+    // 리스크 조기 알림(미확인)도 담당자 알림함에 함께 표시
+    const reads = new Set(((notify.state().reads || {})[userKey(req.query)]) || []);
+    const risks = load('risks.json')
+      .filter((r) => r.status === '미확인')
+      .map((r) => ({ id: 'risk-' + r.id, kind: 'risk', audience: 'admin', createdAt: r.detectedAt, title: r.title, summary: r.diagnosis, level: r.level, link: '/risk.html', related: true, reasons: ['담당 업무: 리스크'], read: reads.has('risk-' + r.id) }));
+    items = [...items, ...risks].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+  res.json({
+    items,
+    unread: items.filter((n) => !n.read).length,
+    unreadRelated: items.filter((n) => !n.read && n.related).length,
+  });
+});
+app.post('/api/notifications/read', (req, res) => {
+  const b = req.body || {};
+  const ids = b.all ? notify.listFor(userKey(b), b.role === 'admin' ? 'admin' : 'employee').map((n) => n.id).concat(load('risks.json').map((r) => 'risk-' + r.id)) : (b.ids || []).map(String);
+  notify.markRead(userKey(b), ids);
+  res.json({ ok: true });
+});
+
+app.get('/api/profile', (req, res) => res.json({ profile: notify.getProfile(userKey(req.query)), options: notify.OPTIONS }));
+app.put('/api/profile', (req, res) => res.json({ profile: notify.saveProfile(userKey(req.body || {}), req.body || {}) }));
+
+app.get('/api/notify/status', (req, res) => res.json(scheduler.status()));
+app.post('/api/notify/check', async (req, res) => {
+  const what = (req.body || {}).what === 'laws' ? 'laws' : 'regs';
+  try {
+    const r = await scheduler.run(what, { source: '담당자 수동 확인', log: (m) => console.log(m) });
+    if (r.busy) return res.status(409).json({ error: '다른 확인 작업이 진행 중입니다. 잠시 후 다시 시도하세요.' });
+    res.json(r);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 새 개정본 업로드 (담당자): 파일명에서 규정명·개정일을 읽고, 같은 규정의 이전 파일은 _archive 로
+app.post('/api/regulations/upload', express.raw({ type: 'application/octet-stream', limit: '30mb' }), async (req, res) => {
+  const name = path.basename(decodeURIComponent(String(req.headers['x-file-name'] || '')));
+  if (!/\.hwpx?$/i.test(name)) return res.status(400).json({ error: 'HWP 또는 HWPX 파일만 올릴 수 있습니다.' });
+  if (!/\(\d{4}년도\s*\d{1,2}월/.test(name)) return res.status(400).json({ error: '파일명에 개정일을 넣어 주세요. 예: 인사관리규정(2026년도 12월 1일 개정).hwp' });
+  if (!req.body || !req.body.length) return res.status(400).json({ error: '빈 파일입니다.' });
+  const { DOCS_DIR } = require('./rag/ingest');
+  fs.writeFileSync(path.join(DOCS_DIR, name), req.body);
+  try {
+    const r = await scheduler.run('regs', { source: '담당자 업로드', log: (m) => console.log(m) });
+    if (r.busy) return res.status(202).json({ ok: true, queued: true, message: '업로드했습니다. 진행 중인 확인이 끝나면 다음 확인 때 반영됩니다.' });
+    res.json({ ok: true, ...r });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════
 // API: 국가법령정보센터
 // ════════════════════════════════════════════════════════════════
 const LAW_BASE = 'https://www.law.go.kr/DRF';
@@ -299,6 +364,8 @@ app.post('/api/compliance/run', async (req, res) => {
     };
     reports.unshift(item);
     save('reports.json', reports);
+    const c = (item.summary && item.summary.판정건수) || {};
+    notify.addNotification({ kind: 'compliance', audience: 'admin', title: `정합성 분석 완료: ${law.name}`, summary: `위반 ${c.위반 || 0} · 미반영 ${c.미반영 || 0} · 보완권고 ${c.보완권고 || 0} · 정합 ${c.정합 || 0}`, link: '/compliance.html', effective: law.effective || '' });
     res.json(item);
   } catch (e) {
     res.status(502).json({ error: e.message });
@@ -390,6 +457,7 @@ app.listen(PORT, async () => {
     process.stdout.write('  임베딩·리랭커 모델 로딩 중… ');
     await models.warmup();
     await sensitive.warmup();
+    scheduler.start((m) => console.log(m));
     console.log('완료\n');
   } catch (e) {
     console.error('  RAG 준비 실패:', e.message, '\n');

@@ -73,6 +73,49 @@
         </div>
       </div>
     </div>
+
+    <!-- 알림 맞춤 설정: "나와 관련된" 규정 개정 알림 판단에 사용 -->
+    <div id="pref-card" class="w-full mt-8 bg-white rounded-3xl shadow-xl border border-slate-200/90 p-6 sm:p-10 space-y-7 ring-1 ring-black/5">
+      <div class="flex flex-wrap items-center gap-2 pb-1 border-b border-slate-100">
+        <span class="material-symbols-outlined text-[22px] text-[#E60012]">notifications_active</span>
+        <h2 class="text-base sm:text-lg font-bold text-slate-900">알림 맞춤 설정</h2>
+        <span class="text-xs text-slate-500">규정이 바뀌면 나와 관련된 내용을 먼저 알려드려요</span>
+      </div>
+
+      <section class="space-y-3">
+        <h3 class="text-sm font-bold text-slate-800">기본 정보 <span class="font-normal text-slate-400 text-xs">— 특정 직급·직위·근무지에만 적용되는 개정을 골라내요</span></h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label class="text-xs font-semibold text-slate-600 space-y-1.5"><span>직급</span><select id="p-grade" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 bg-white focus:border-[#E60012] outline-none"></select></label>
+          <label class="text-xs font-semibold text-slate-600 space-y-1.5"><span>직위</span><select id="p-position" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 bg-white focus:border-[#E60012] outline-none"></select></label>
+          <label class="text-xs font-semibold text-slate-600 space-y-1.5"><span>근무지</span><select id="p-location" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 bg-white focus:border-[#E60012] outline-none"></select></label>
+        </div>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-sm font-bold text-slate-800">관심 주제 <span class="font-normal text-slate-400 text-xs">— 여러 개 선택</span></h3>
+        <div id="p-topics" class="flex flex-wrap gap-2"></div>
+      </section>
+
+      <section class="space-y-3 rounded-2xl border border-amber-200 bg-amber-50/50 p-4 sm:p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-amber-600">lock</span>개인 상황 <span class="font-normal text-slate-500 text-xs">(선택)</span></h3>
+          <button id="p-sit-clear" type="button" class="text-xs font-semibold text-slate-500 hover:text-[#E60012]">개인 상황 모두 지우기</button>
+        </div>
+        <p class="text-[11px] text-slate-600 leading-relaxed">임신·육아·휴직처럼 민감할 수 있는 정보예요. <strong>원할 때만</strong> 선택하세요. 관련 개정 알림을 고르는 데만 쓰이고, 다른 사람에게 보이지 않으며 언제든 지울 수 있어요.</p>
+        <div id="p-situations" class="flex flex-wrap gap-2"></div>
+      </section>
+
+      <div class="rounded-xl bg-slate-50 border border-slate-200 p-3.5 flex items-start gap-2 text-[11px] text-slate-600">
+        <span class="material-symbols-outlined text-[16px] text-slate-400">history</span>
+        <span>최근에 챗봇에 물어본 <strong>주제</strong>(예: 휴가·휴직)도 알림 판단에 참고해요. 질문 내용이 아니라 주제만, 이 브라우저에만 저장돼요.
+          <button id="p-recent-clear" type="button" class="ml-1 font-semibold text-slate-500 hover:text-[#E60012] underline">지우기</button> <span id="p-recent" class="text-slate-400"></span></span>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+        <span id="p-saved" class="text-xs text-slate-400"></span>
+        <button id="p-save" type="button" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#111827] hover:bg-[#E60012] text-white font-bold text-sm flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-[18px]">save</span>설정 저장</button>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -135,6 +178,44 @@ if (HR.guard()) {
     document.getElementById('privacy-chevron').style.transform = open ? 'rotate(180deg)' : '';
   };
   render();
+
+  // ── 알림 맞춤 설정
+  (async () => {
+    const who = { user: HR.name(), role: HR.isAdmin() ? 'admin' : 'employee' };
+    const { profile, options } = await HR.api(`/api/profile?user=${encodeURIComponent(who.user)}&role=${who.role}`);
+    const sel = (id, list, v, empty) => {
+      document.getElementById(id).innerHTML = `<option value="">${empty}</option>` + list.map((x) => `<option ${x === v ? 'selected' : ''}>${HR.esc(x)}</option>`).join('');
+    };
+    sel('p-grade', options.grades, profile.grade, '선택 안 함');
+    sel('p-position', options.positions, profile.position, '선택 안 함');
+    sel('p-location', options.locations, profile.location, '선택 안 함');
+    const chips = (id, list, on, accent) => {
+      const box = document.getElementById(id);
+      box.innerHTML = list.map((x) => `<button type="button" data-v="${HR.esc(x)}" aria-pressed="${on.includes(x)}" class="chip px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-colors"></button>`).join('');
+      box.querySelectorAll('.chip').forEach((b) => {
+        b.textContent = b.dataset.v;
+        const paint = () => (b.className = 'chip px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-colors ' + (b.getAttribute('aria-pressed') === 'true' ? accent : 'border-slate-200 bg-white text-slate-600 hover:border-red-200'));
+        paint();
+        b.onclick = () => { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); paint(); };
+      });
+    };
+    chips('p-topics', options.topics, profile.topics, 'border-[#E60012] bg-red-50 text-[#E60012]');
+    chips('p-situations', options.situations, profile.situations, 'border-amber-500 bg-amber-100 text-amber-800');
+    const picked = (id) => [...document.querySelectorAll(`#${id} .chip[aria-pressed="true"]`)].map((b) => b.dataset.v);
+    document.getElementById('p-sit-clear').onclick = () => document.querySelectorAll('#p-situations .chip').forEach((b) => { b.setAttribute('aria-pressed', 'false'); b.click(); b.click(); });
+    const recent = HR.recentTopics();
+    document.getElementById('p-recent').textContent = recent.length ? `(지금: ${recent.join(', ')})` : '(아직 없음)';
+    document.getElementById('p-recent-clear').onclick = () => { HR.clearRecentTopics(); document.getElementById('p-recent').textContent = '(아직 없음)'; HR.toast('최근 질문 주제를 지웠어요.'); };
+    if (profile.updatedAt) document.getElementById('p-saved').textContent = `마지막 저장 ${profile.updatedAt}`;
+    document.getElementById('p-save').onclick = async () => {
+      const body = { ...who, grade: document.getElementById('p-grade').value, position: document.getElementById('p-position').value, location: document.getElementById('p-location').value, topics: picked('p-topics'), situations: picked('p-situations') };
+      const r = await HR.api('/api/profile', { method: 'PUT', body });
+      document.getElementById('p-saved').textContent = `마지막 저장 ${r.profile.updatedAt}`;
+      HR.toast('알림 설정을 저장했어요. 나와 관련된 개정 알림이 다시 계산됩니다.');
+      HR.refreshBell && HR.refreshBell();
+    };
+    if (location.hash === '#prefs') document.getElementById('pref-card').scrollIntoView({ behavior: 'smooth' });
+  })().catch(() => {});
 }
 </script>
 </body></html>

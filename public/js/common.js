@@ -17,8 +17,8 @@ window.HR = (() => {
     return id;
   }
 
-  function login(r, n) { store.set('hrhappy.role', r); store.set('hrhappy.name', n || 'OO'); store.del('hrhappy.sid'); }
-  function logout() { ['hrhappy.role', 'hrhappy.name', 'hrhappy.sid'].forEach(store.del); location.href = '/'; }
+  function login(r, n) { store.set('hrhappy.role', r); store.set('hrhappy.name', n || 'OO'); store.del('hrhappy.sid'); try { sessionStorage.removeItem('hrhappy.bellToast'); } catch {} }
+  function logout() { ['hrhappy.role', 'hrhappy.name', 'hrhappy.sid'].forEach(store.del); try { sessionStorage.removeItem('hrhappy.bellToast'); } catch {} location.href = '/'; }
 
   // 개인정보 수집·이용 동의 ('Y' | 'N' | '' = 미선택)
   const consent = () => store.get('hrhappy.consent');
@@ -91,6 +91,13 @@ window.HR = (() => {
             <nav class="hidden lg:flex items-center gap-1.5">${nav}</nav>
           </div>
           <div class="flex items-center gap-2 shrink-0">
+            <div class="relative">
+              <button id="bell-btn" type="button" title="알림" aria-label="알림" aria-haspopup="true" aria-expanded="false" class="relative w-9 h-9 rounded-xl text-slate-500 hover:text-[#E60012] hover:bg-red-50 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[22px]">notifications</span>
+                <span id="bell-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#E60012] text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white"></span>
+              </button>
+              <div id="bell-panel" class="hidden absolute right-0 mt-2 w-[min(92vw,380px)] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden"></div>
+            </div>
             <a href="/mypage.html" title="마이페이지" class="flex items-center gap-2 hover:opacity-80">
             <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs ring-2 ring-red-500/20">${initials}</div>
             <div class="hidden md:flex flex-col text-left">
@@ -116,6 +123,97 @@ window.HR = (() => {
           <div class="text-[11px] text-slate-400 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">shield</span><span>© 2026 KT IS Corp. All rights reserved.</span></div>
         </div>
       </footer>`);
+    initBell();
+  }
+
+  // ── 최근 질문 주제 (질문 원문이 아니라 주제만, 이 브라우저에만 저장)
+  const TOPIC_WORDS = [
+    ['휴가·휴직', /휴가|연차|휴직|병가|공가|청원/], ['출산·육아', /출산|육아|임신|태아|난임|자녀|보육/], ['급여·수당', /급여|월급|연봉|수당|보수|상여|퇴직금|성과급/],
+    ['복지', /복지|포인트|학자금|의료비|경조|사택|주택/], ['평가·승진', /평가|승진|고과|인사고과/], ['징계·복무', /징계|복무|무단|해고|괴롭힘|성희롱/],
+    ['채용·인사이동', /채용|전보|발령|전직|이동|임용/], ['근무시간·유연근무', /근무시간|유연|재택|시간외|연장근무|야근|출퇴근/], ['국외근무', /국외|해외|지사|파견/], ['교육·연수', /교육|연수|자기개발/],
+  ];
+  const rtKey = () => `hrhappy.recentTopics.${role()}.${name()}`;
+  function recentTopics() {
+    try { return JSON.parse(store.get(rtKey(), '[]')); } catch { return []; }
+  }
+  function addRecentTopics(question) {
+    const hit = TOPIC_WORDS.filter(([, re]) => re.test(question)).map(([t]) => t);
+    if (!hit.length) return;
+    const list = [...hit, ...recentTopics().filter((t) => !hit.includes(t))].slice(0, 5);
+    store.set(rtKey(), JSON.stringify(list));
+  }
+  const clearRecentTopics = () => store.del(rtKey());
+
+  // ── 헤더 알림함
+  const KIND = {
+    'reg-change': { icon: 'gavel', color: 'bg-red-50 text-[#E60012]', label: '사규 개정' },
+    'law-change': { icon: 'balance', color: 'bg-blue-50 text-[#0050CC]', label: '법령 개정' },
+    effective: { icon: 'event', color: 'bg-amber-50 text-amber-600', label: '시행일' },
+    compliance: { icon: 'verified_user', color: 'bg-emerald-50 text-emerald-600', label: '정합성 분석' },
+    risk: { icon: 'warning', color: 'bg-orange-50 text-orange-600', label: '리스크' },
+  };
+  let bellData = null, bellTab = 'related';
+  const who = () => `user=${encodeURIComponent(name())}&role=${isAdmin() ? 'admin' : 'employee'}`;
+  async function refreshBell({ toastOnLogin = false } = {}) {
+    try {
+      bellData = await api(`/api/notifications?${who()}&recent=${encodeURIComponent(recentTopics().join(','))}`);
+    } catch { return; }
+    const badge = document.getElementById('bell-badge');
+    if (!badge) return;
+    const n = bellData.unreadRelated || 0;
+    badge.textContent = n > 99 ? '99+' : n;
+    badge.classList.toggle('hidden', !n);
+    if (toastOnLogin && n && !sessionStorage.getItem('hrhappy.bellToast')) {
+      sessionStorage.setItem('hrhappy.bellToast', '1');
+      toast(`나와 관련된 새 알림 ${n}건이 있어요. 오른쪽 위 종을 눌러 확인하세요.`);
+    }
+    if (!document.getElementById('bell-panel').classList.contains('hidden')) renderBell();
+  }
+  function renderBell() {
+    const panel = document.getElementById('bell-panel');
+    const items = (bellData && bellData.items) || [];
+    const rel = items.filter((x) => x.related), all = items;
+    const list = bellTab === 'related' ? rel : all;
+    const tab = (k, label, n) => `<button data-tab="${k}" class="flex-1 py-2.5 text-xs font-bold border-b-2 ${bellTab === k ? 'border-[#E60012] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-700'}">${label} <span class="ml-0.5 text-[10px] ${bellTab === k ? 'text-[#E60012]' : ''}">${n}</span></button>`;
+    panel.innerHTML = `
+      <div class="flex items-center justify-between px-4 pt-3.5 pb-1"><span class="text-sm font-extrabold text-slate-900">알림</span>
+        <button id="bell-readall" class="text-[11px] font-semibold text-slate-400 hover:text-[#E60012]">모두 읽음</button></div>
+      <div class="flex px-2">${tab('related', '나와 관련', rel.filter((x) => !x.read).length)}${tab('all', '전체', all.filter((x) => !x.read).length)}</div>
+      <div class="max-h-[60vh] overflow-y-auto divide-y divide-slate-100">
+        ${list.length ? list.slice(0, 30).map((x) => {
+          const k = KIND[x.kind] || KIND['reg-change'];
+          return `<a href="${x.kind === 'risk' ? x.link : '/notifications.html?id=' + encodeURIComponent(x.id)}" data-id="${esc(x.id)}" class="bell-item flex gap-3 px-4 py-3 hover:bg-slate-50 ${x.read ? 'opacity-60' : ''}">
+            <span class="w-8 h-8 rounded-lg ${k.color} flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[18px]">${k.icon}</span></span>
+            <span class="min-w-0 flex-1">
+              <span class="flex items-center gap-1.5 text-[10px] text-slate-400"><span class="font-bold">${k.label}</span>·<span>${esc(String(x.createdAt).slice(0, 10))}</span>${x.read ? '' : '<span class="w-1.5 h-1.5 rounded-full bg-[#E60012]"></span>'}</span>
+              <span class="block text-xs font-bold text-slate-900 leading-snug mt-0.5">${esc(x.title)}</span>
+              ${x.reasons && x.reasons.length && x.related ? `<span class="flex flex-wrap gap-1 mt-1">${x.reasons.slice(0, 3).map((r) => `<span class="px-1.5 py-0.5 rounded bg-red-50 text-[#E60012] text-[10px] font-semibold">${esc(r)}</span>`).join('')}</span>` : ''}
+            </span></a>`;
+        }).join('') : `<div class="px-4 py-10 text-center text-xs text-slate-400">${bellTab === 'related' ? '나와 관련된 알림이 없어요.<br><a href="/mypage.html#prefs" class="text-[#E60012] font-semibold underline">알림 맞춤 설정</a>을 하면 더 정확해져요.' : '알림이 없어요.'}</div>`}
+      </div>
+      <a href="/notifications.html" class="block text-center py-2.5 text-xs font-bold text-slate-600 hover:text-[#E60012] border-t border-slate-100">알림 전체 보기</a>`;
+    panel.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = (e) => { e.stopPropagation(); bellTab = b.dataset.tab; renderBell(); }));
+    panel.querySelector('#bell-readall').onclick = async (e) => {
+      e.stopPropagation();
+      await api('/api/notifications/read', { method: 'POST', body: { user: name(), role: isAdmin() ? 'admin' : 'employee', all: true } });
+      refreshBell();
+    };
+    panel.querySelectorAll('.bell-item').forEach((a) => (a.onclick = () => { api('/api/notifications/read', { method: 'POST', body: { user: name(), role: isAdmin() ? 'admin' : 'employee', ids: [a.dataset.id] } }).catch(() => {}); }));
+  }
+  function initBell() {
+    const btn = document.getElementById('bell-btn'), panel = document.getElementById('bell-panel');
+    if (!btn) return;
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const open = panel.classList.toggle('hidden') === false;
+      btn.setAttribute('aria-expanded', open);
+      if (open) renderBell();
+    };
+    panel.onclick = (e) => e.stopPropagation();
+    document.addEventListener('click', () => { panel.classList.add('hidden'); btn.setAttribute('aria-expanded', false); });
+    document.addEventListener('keydown', (e) => e.key === 'Escape' && panel.classList.add('hidden'));
+    refreshBell({ toastOnLogin: true });
+    setInterval(() => refreshBell(), 5 * 60e3);
   }
 
   // 공통 위젯: 통계 막대
@@ -134,5 +232,5 @@ window.HR = (() => {
       </div>`).join('');
   }
 
-  return { role, name, isAdmin, consent, setConsent, requireConsent, botName, mascot, sessionId, login, logout, guard, esc, md, api, toast, layout, statBars, logo };
+  return { role, name, isAdmin, consent, setConsent, requireConsent, botName, mascot, sessionId, login, logout, guard, esc, md, api, toast, layout, statBars, logo, recentTopics, addRecentTopics, clearRecentTopics, refreshBell, KIND };
 })();

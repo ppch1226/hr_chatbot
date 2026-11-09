@@ -120,15 +120,36 @@ function hwpBlocks(file) {
 
 const unxml = (s) => s.replace(/<hp:tab\b[^>]*\/>/g, '\t').replace(/<hp:lineBreak\b[^>]*\/>/g, '\n').replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 
-async function hwpxBlocks(file) {
+/**
+ * 변경 추적 처리
+ *  accept: 삭제 표시 구간의 글자를 버리고 삽입은 유지 → 현행(변경 수락) 문서
+ *  reject: 삽입 표시 구간의 글자를 버리고 삭제는 유지 → 변경 전(이전 판) 문서
+ * 태그 구조(문단·표)는 그대로 두고 글자만 지움
+ */
+function applyTrackChanges(xml, mode) {
+  const drop = mode === 'reject' ? /<hp:insertBegin\b[^>]*\/>[\s\S]*?<hp:insertEnd\b[^>]*\/>/g : /<hp:deleteBegin\b[^>]*\/>[\s\S]*?<hp:deleteEnd\b[^>]*\/>/g;
+  return xml.replace(drop, (span) => span.replace(/>[^<]+</g, '><'));
+}
+
+/** HWPX에 변경 추적(삽입·삭제 표시)이 남아 있는지 */
+async function hasTrackChanges(file) {
+  if (!/\.hwpx$/i.test(file)) return false;
+  const zip = await JSZip.loadAsync(fs.readFileSync(file));
+  for (const n of Object.keys(zip.files).filter((x) => /Contents\/section\d+\.xml$/.test(x))) {
+    if (/<hp:(insert|delete)Begin\b/.test(await zip.file(n).async('string'))) return true;
+  }
+  return false;
+}
+
+async function hwpxBlocks(file, { trackChanges = 'accept' } = {}) {
   const zip = await JSZip.loadAsync(fs.readFileSync(file));
   const names = Object.keys(zip.files)
     .filter((n) => /Contents\/section\d+\.xml$/.test(n))
     .sort((a, b) => Number(a.match(/(\d+)\.xml$/)[1]) - Number(b.match(/(\d+)\.xml$/)[1]));
   const blocks = [];
   for (const n of names) {
-    // 변경 추적: 삭제 표시된 구간의 글자는 버리고(태그 구조는 유지), 삽입된 글자는 그대로 → "변경 내용 수락" 상태
-    const xml = (await zip.file(n).async('string')).replace(/<hp:deleteBegin\b[^>]*\/>[\s\S]*?<hp:deleteEnd\b[^>]*\/>/g, (span) => span.replace(/>[^<]+</g, '><'));
+    // 변경 추적: 기본은 "변경 내용 수락" 상태로 읽음
+    const xml = applyTrackChanges(await zip.file(n).async('string'), trackChanges);
     const stack = []; // 표
     const paras = []; // 문단 스택(표 안에 문단, 그 안에 표...)
     const sink = () => {
@@ -178,10 +199,10 @@ async function hwpxBlocks(file) {
   return blocks;
 }
 
-async function parseFile(file) {
-  if (/\.hwpx$/i.test(file)) return hwpxBlocks(file);
+async function parseFile(file, opts = {}) {
+  if (/\.hwpx$/i.test(file)) return hwpxBlocks(file, opts);
   if (/\.hwp$/i.test(file)) return hwpBlocks(file);
   throw new Error('지원하지 않는 형식: ' + file);
 }
 
-module.exports = { parseFile };
+module.exports = { parseFile, hasTrackChanges };

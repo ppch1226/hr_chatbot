@@ -94,6 +94,9 @@ if (HR.guard(true)) {
   document.getElementById('presets').innerHTML = PRESETS.map((p) => `<button type="button" data-p="${p}" class="px-3 py-1.5 rounded-full border border-slate-200 text-xs font-medium text-slate-700 hover:bg-red-50 hover:text-[#E60012] hover:border-red-200">${p}</button>`).join('');
   document.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => { document.getElementById('law-q').value = b.dataset.p; search(); }));
   document.getElementById('law-form').addEventListener('submit', (e) => { e.preventDefault(); search(); });
+  // 알림의 "정합성 분석하러 가기"에서 넘어온 경우 해당 법령을 바로 조회
+  const lawParam = new URLSearchParams(location.search).get('law');
+  if (lawParam) { document.getElementById('law-q').value = lawParam; search(); }
 
   async function search() {
     const q = document.getElementById('law-q').value.trim(); if (!q) return;

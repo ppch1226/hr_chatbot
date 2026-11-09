@@ -235,6 +235,7 @@ if (HR.guard() && HR.requireConsent()) {
   const KIND_STYLE = {
     사규: 'bg-slate-900 text-white', 법령: 'bg-[#0050CC] text-white', 판례: 'bg-violet-600 text-white',
     행정규칙: 'bg-teal-600 text-white', 행정해석: 'bg-amber-500 text-white', 노동위원회: 'bg-emerald-600 text-white',
+    '최근 개정': 'bg-[#E60012] text-white',
   };
   function sourceList(sources) {
     if (!sources.length) return '';
@@ -252,6 +253,7 @@ if (HR.guard() && HR.requireConsent()) {
             <span class="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${KIND_STYLE[kind] || KIND_STYLE.사규}">${HR.esc(kind)}</span>
             ${kind === '사규' || kind === '법령' ? `<span class="font-bold text-slate-900 shrink-0 max-w-[45%] truncate">${HR.esc(s.doc)}</span>` : ''}
             <span class="text-slate-600 truncate">${HR.esc(s.label)}</span>
+            ${s.recent ? `<a href="${HR.esc(s.recent.url)}" title="${HR.esc(s.recent.summary)}" onclick="event.stopPropagation()" class="shrink-0 px-1.5 py-0.5 rounded bg-[#E60012] text-white text-[10px] font-bold hover:bg-red-700">최근 개정 ${HR.esc(s.recent.at.slice(5))}</a>` : ''}
             <span class="ml-auto text-[10px] text-slate-400 shrink-0 hidden sm:inline">${meta}</span>
             <span class="material-symbols-outlined text-[16px] text-slate-400 transition-transform group-open:rotate-180 shrink-0">expand_more</span>
           </summary>
@@ -525,6 +527,8 @@ if (HR.guard() && HR.requireConsent()) {
     if (!text || busy) return;
     clearTimeout(senseTimer); senseSeq++;
     const anonymous = anonChk.checked && !anonBox.classList.contains('hidden');
+    // 알림 맞춤용: 질문 주제만 이 브라우저에 기록 (익명 질문은 기록하지 않음)
+    if (!anonymous) HR.addRecentTopics(text);
     busy = true; sendBtn.disabled = true; qInput.value = '';
     anonChk.checked = false; anonBox.classList.add('hidden');
     addUser(text, anonymous); addTyping();

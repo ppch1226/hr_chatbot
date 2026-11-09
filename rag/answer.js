@@ -6,6 +6,9 @@ const { embed } = require('./models');
 const { chat, chatStream } = require('./llm');
 const VIS = require('./visuals');
 const lawsources = require('./lawsources');
+const notify = require('./notify');
+// "최근 바뀐 규정 알려줘" 같은 질문 → 개정 알림 내역을 근거로 사용
+const RECENT_Q = /(최근|요즘|이번|새로|올해).{0,12}(바뀐|개정|변경|달라진|바뀌었|신설)|(바뀐|개정된|변경된|달라진)\s*(규정|사규|내용|조항|점)/;
 
 // 개인별 수치(잔여 연차·내 급여 등)는 규정 문서에 없는 정형 데이터 → RAG로 추측하지 않음
 const PERSONAL = /(내|나의|제|저의|우리\s*팀)\s*(남은|잔여|현재|이번\s*달)?\s*(연차|휴가|복지\s*포인트|급여|월급|연봉|보수|퇴직금|성과급|호봉|평가\s*등급)|(남은|잔여)\s*(연차|휴가|복지\s*포인트)\s*(는|가|이)?\s*(몇|얼마)/;
@@ -112,6 +115,14 @@ function lawHint(evidence) {
   if (cases) lines.push(`판례·행정해석 등 참고 사례 ${cases}가 있습니다. 질문과 관련 있는 것은 "### 참고 판례·해석" 소제목 아래에 사건번호(안건번호)·요지·이번 사안에 주는 시사점을 쓰고 근거 번호를 붙이세요. 이 사례들은 사규가 아니므로 "판례도 있습니다"처럼 사규 설명과 섞지 말고 이 섹션에서만 다루세요.`);
   return lines.length ? '(참고: ' + lines.join(' ') + ')' : '';
 }
+/** 최근 30일 안에 개정된 조문이면 표시 정보 */
+function recentMark(c) {
+  // 본문은 조문번호(제6조), 별표·별지는 "별표 3" 같은 번호로 매칭
+  const key = c.articleNo || c.label.replace(/\s*\(\d+\/\d+\)$/, '');
+  const hit = notify.recentChanges(30).find((r) => r.doc === c.doc && (r.articleNo || r.label) === key);
+  return hit ? { change: hit.change, summary: hit.summary, at: hit.at.slice(0, 10), effective: hit.effective, url: `/notifications.html?id=${hit.notificationId}` } : null;
+}
+
 /** 인사담당자용 "참고 판례·해석" 섹션 작성 (본 답변과 별도 호출) */
 async function writeCases(question, items) {
   const ctx = items.map((e) => `[${e.n}] (${e.kind}) ${e.head}\n${e.text}`).join('\n\n---\n\n');
@@ -180,7 +191,11 @@ async function answer({ question, role = 'employee', sessionId = 'default', anon
     onEvent({ type: 'stage', stage: 'retrieved', counts });
   }
   const chunks = r.chunks;
-  const evidence = evidenceList(chunks, lawRes.items);
+  // 최근 개정 질문이면 개정 알림 내역을 근거에 추가
+  const recentItems = RECENT_Q.test(question)
+    ? notify.recentChanges(180).slice(0, 15).map((c) => ({ kind: '최근 개정', title: `${c.docLabel} ${c.label} (${c.change}, ${c.at.slice(0, 10)})`, text: c.summary, date: c.at.slice(0, 10), url: `/notifications.html?id=${c.notificationId}`, score: 1 }))
+    : [];
+  const evidence = evidenceList(chunks, [...recentItems, ...lawRes.items]);
 
   // 신청·조회 경로를 묻거나 개인별 수치를 물으면 eHR 메뉴 목록을 함께 제공
   const procedure = personal || PROCEDURE.test(question);
@@ -272,6 +287,7 @@ async function answer({ question, role = 'employee', sessionId = 'default', anon
             path: e.chunk.header.replace(/^\[|\]$/g, ''),
             score: Math.round(e.chunk.score * 1000) / 1000,
             text: e.chunk.text,
+            recent: recentMark(e.chunk),
           }
         : {
             n: e.n,
