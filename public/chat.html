@@ -42,7 +42,6 @@
           </div>
           <div class="flex items-center gap-1.5">
             <div id="weather" class="hidden sm:flex items-center gap-1.5 h-9 px-3 mr-1 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600 whitespace-nowrap"></div>
-            <button id="btn-tts" title="마지막 답변 읽어주기" class="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-[#E60012] text-slate-500 flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">volume_up</span></button>
             <button id="btn-reset" title="새 대화 시작" class="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-[#E60012] text-slate-500 flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">refresh</span></button>
           </div>
         </div>
@@ -130,7 +129,7 @@ if (HR.guard() && HR.requireConsent()) {
   const stream = document.getElementById('stream');
   const qInput = document.getElementById('q');
   const sendBtn = document.getElementById('send');
-  let lastAnswer = '';
+
   const time = () => new Date().toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
 
   function welcome() {
@@ -480,7 +479,7 @@ if (HR.guard() && HR.requireConsent()) {
       list.insertAdjacentHTML('beforeend', `<div class="flex items-start gap-3 sm:gap-4">${avatar()}<div class="bg-red-50 border border-red-200 text-red-700 rounded-2xl rounded-tl-xs p-4 text-sm">${HR.esc(error)}</div></div>`);
       return scroll();
     }
-    lastAnswer = answer;
+
     let notice = personal ? `<div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 sm:p-4 space-y-1.5">
         <div class="flex items-center gap-1.5 text-xs font-bold text-slate-700"><span class="material-symbols-outlined text-[18px]">database</span>개인별 정보 안내</div>
         <p class="text-xs text-slate-600 leading-relaxed pl-6">잔여 연차·급여 같은 <strong>본인 수치</strong>는 규정 문서가 아니라 eHR에서 조회돼요. 아래 eHR 바로가기를 이용하세요. 위 답변은 적용 기준만 안내합니다.</p></div>` : '';
@@ -572,12 +571,6 @@ if (HR.guard() && HR.requireConsent()) {
   document.getElementById('btn-reset').onclick = async () => {
     await HR.api('/api/chat', { method: 'POST', body: { role: admin ? 'admin' : 'employee', sessionId: HR.sessionId(), reset: true } }).catch(() => {});
     welcome(); showDefaultChips(); HR.toast('새 대화를 시작합니다.');
-  };
-  document.getElementById('btn-tts').onclick = () => {
-    if (!lastAnswer || !('speechSynthesis' in window)) return HR.toast('읽어드릴 답변이 없어요.');
-    speechSynthesis.cancel();
-    const div = document.createElement('div'); div.innerHTML = HR.md(lastAnswer);
-    const u = new SpeechSynthesisUtterance(div.textContent.slice(0, 600)); u.lang = 'ko-KR'; speechSynthesis.speak(u);
   };
   document.getElementById('btn-mic').onclick = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;

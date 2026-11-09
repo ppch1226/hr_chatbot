@@ -52,7 +52,7 @@
   <!-- ═════════ 마이페이지 대시보드 ═════════ -->
   <section id="dash" class="hidden flex-col">
     <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-7 border-b border-slate-200/80 gap-4">
-      <h1 id="page-title" class="text-2xl font-extrabold text-slate-900 tracking-tight">마이페이지 대시보드</h1>
+      <h1 id="page-title" class="text-2xl font-extrabold text-slate-900 tracking-tight">사내 일정 & 근태 캘린더</h1>
       <div class="flex flex-wrap items-center gap-2.5">
         <a href="#privacy" class="flex items-center gap-2 text-xs text-slate-500 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm hover:border-slate-300">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span><span class="font-medium">개인정보 수집·이용 : <strong class="text-slate-800">동의 완료</strong></span></a>
@@ -62,7 +62,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] gap-7 items-start">
       <!-- 왼쪽: 프로필 · 활동 메트릭 · 빠른 이동 -->
-      <aside class="space-y-5 lg:sticky lg:top-6">
+      <aside class="space-y-5">
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 overflow-hidden relative">
           <div class="absolute top-0 inset-x-0 h-20 bg-gradient-to-br from-rose-50 via-red-50/40 to-blue-50/40 border-b border-slate-100"></div>
           <div class="relative flex flex-col items-center text-center pt-2">
@@ -80,6 +80,11 @@
               ✨ 나와 맞는 마스코트 변경<span class="material-symbols-outlined text-[15px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span></button>
           </div>
         </div>
+
+        <nav class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-3">
+          <div class="px-3 pt-2 pb-2 text-[11px] font-bold tracking-wider text-slate-400">QUICK NAVIGATION</div>
+          <div id="quick-nav" class="space-y-0.5"></div>
+        </nav>
 
         <!-- 나의 질문 현황: 몇 번 물어봤는지 · 무엇을 가장 많이 물어봤는지 -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 space-y-4">
@@ -103,17 +108,12 @@
             <span class="text-emerald-600 font-semibold flex items-center gap-0.5" title="익명으로 한 질문은 집계하지 않아요"><span class="material-symbols-outlined text-[14px]">shield</span>익명 질문 제외</span>
           </div>
         </div>
-
-        <nav class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-3">
-          <div class="px-3 pt-2 pb-2 text-[11px] font-bold tracking-wider text-slate-400">QUICK NAVIGATION</div>
-          <div id="quick-nav" class="space-y-0.5"></div>
-        </nav>
       </aside>
 
       <!-- 오른쪽: 화면 -->
       <div class="min-w-0">
         <!-- 나의 질문기록 -->
-        <div data-view="history" class="space-y-7">
+        <div data-view="history" class="hidden space-y-7">
           <section class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
               <div class="flex items-center gap-2.5"><span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200/80"><span class="material-symbols-outlined text-[20px]">history_edu</span></span>
@@ -133,7 +133,7 @@
         </div>
 
         <!-- 일정 (캘린더) -->
-        <div data-view="calendar" class="hidden space-y-6">
+        <div data-view="calendar" class="space-y-6">
           <section class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
               <div class="flex items-center gap-2.5"><span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200/80"><span class="material-symbols-outlined text-[20px]">calendar_month</span></span>
@@ -406,8 +406,8 @@ if (HR.guard()) {
 
   // 빠른 이동
   const VIEWS = [
-    { id: 'history', icon: 'history_edu', label: '나의 질문기록', title: '마이페이지 대시보드' },
     { id: 'calendar', icon: 'calendar_month', label: '일정', title: '사내 일정 & 근태 캘린더' },
+    { id: 'history', icon: 'history_edu', label: '나의 질문기록', title: '나의 질문기록' },
     { id: 'stats', icon: 'bar_chart', label: '직급별 질문 통계', title: '직급별 질문 통계' },
     ...(admin ? [{ id: 'compliance', icon: 'gavel', label: '정합성 분석 기록', title: '정합성 분석 기록' }] : []),
     { id: 'notif', icon: 'notifications', label: '사규 개정 알림', href: '/notifications.html' },
@@ -431,7 +431,7 @@ if (HR.guard()) {
         <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px] ${on ? 'text-[#E60012]' : 'text-slate-400'}">${v.icon}</span>${v.label}${v.href ? '<span class="material-symbols-outlined text-[13px] text-slate-300">open_in_new</span>' : ''}</span>${navBadge[v.id] || ''}</a>`;
     }).join('');
   }
-  const current = () => { const h = location.hash.slice(1); return VIEWS.some((v) => v.id === h && !v.href) ? h : 'history'; };
+  const current = () => { const h = location.hash.slice(1); return VIEWS.some((v) => v.id === h && !v.href) ? h : 'calendar'; };
   function route() {
     const v = current();
     document.querySelectorAll('[data-view]').forEach((el) => el.classList.toggle('hidden', el.dataset.view !== v));

@@ -13,8 +13,9 @@
 </head>
 <body class="min-h-screen flex flex-col relative">
 <main class="relative z-20 flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-    <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm">
+  <!-- 두 카드는 같은 높이: 사내규정은 처음 4개만 보이고 나머지는 토글로 펼침 -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+    <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm flex flex-col">
       <div class="flex items-center justify-between pb-4 border-b border-slate-100">
         <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-[#E60012]"><span class="material-symbols-outlined text-[24px]">trending_up</span></div>
           <h2 class="font-bold text-slate-900 text-xl sm:text-2xl">실시간 인기 검색어</h2></div>
@@ -22,13 +23,14 @@
       </div>
       <div id="stats" class="mt-5 space-y-4"></div>
     </div>
-    <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm">
+    <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm flex flex-col">
       <div class="flex items-center justify-between pb-4 border-b border-slate-100">
         <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-[#E60012]"><span class="material-symbols-outlined text-[24px]">menu_book</span></div>
           <h2 class="font-bold text-slate-900 text-xl sm:text-2xl">사내규정 바로가기</h2></div>
         <span class="bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1 rounded-full text-xs font-medium">최신 규정 적용</span>
       </div>
       <div id="regs" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-5"></div>
+      <button id="regs-toggle" type="button" class="hidden mt-auto pt-4 w-full text-xs font-bold text-slate-600 hover:text-[#E60012] flex items-center justify-center gap-1"></button>
     </div>
   </div>
 
@@ -71,14 +73,24 @@ if (HR.guard(true)) {
   const statusBadge = (s) => ({ 게시: 'bg-emerald-50 text-emerald-700 border-emerald-200', 반려: 'bg-slate-100 text-slate-500 border-slate-200', 대기: 'bg-amber-50 text-amber-700 border-amber-200' }[s] || 'bg-slate-100');
 
   HR.api('/api/stats').then((s) => (document.getElementById('stats').innerHTML = HR.statBars(s.topics)));
+  const REG_SHOW = 4;
+  let regsOpen = false;
   HR.api('/api/regulations').then((rs) => {
-    document.getElementById('regs').innerHTML = rs.map((r) => `
-      <div class="p-4 rounded-xl border border-slate-200 hover:border-red-200 bg-slate-50/50 hover:bg-white transition-all flex flex-col justify-between gap-3 group">
+    const box = document.getElementById('regs'), tg = document.getElementById('regs-toggle');
+    const paint = () => {
+      box.querySelectorAll('[data-reg]').forEach((el, i) => el.classList.toggle('hidden', !regsOpen && i >= REG_SHOW));
+      tg.innerHTML = regsOpen ? '접기<span class="material-symbols-outlined text-[18px]">expand_less</span>' : `전체 규정 보기 (${rs.length}개)<span class="material-symbols-outlined text-[18px]">expand_more</span>`;
+    };
+    tg.classList.toggle('hidden', rs.length <= REG_SHOW);
+    tg.onclick = () => { regsOpen = !regsOpen; paint(); };
+    box.innerHTML = rs.map((r) => `
+      <div data-reg class="p-4 rounded-xl border border-slate-200 hover:border-red-200 bg-slate-50/50 hover:bg-white transition-all flex flex-col justify-between gap-3 group">
         <div class="flex items-start justify-between"><div class="space-y-1.5"><h3 class="text-base font-bold text-slate-900 group-hover:text-[#E60012]">${HR.esc(r.name)}</h3><p class="text-xs text-slate-500 font-medium">${HR.esc(r.revised.replace(/-/g, '.'))} 개정</p></div>
           <span class="material-symbols-outlined text-slate-400 group-hover:text-[#E60012] text-[22px]">description</span></div>
         <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between"><span class="text-xs text-slate-600 font-medium">${HR.esc(r.desc)}</span>
           <a class="text-xs font-bold text-slate-800 group-hover:text-[#E60012] inline-flex items-center gap-1" href="/chat.html?q=${encodeURIComponent(r.ask)}">요약 보기<span class="material-symbols-outlined text-[16px]">arrow_forward</span></a></div>
       </div>`).join('');
+    paint();
   });
 
   function render() {

@@ -18,7 +18,8 @@ const ROOT = __dirname;
 const nm = (...p) => path.join(ROOT, 'node_modules', ...p);
 
 // ── 정적 파일 (오프라인에서도 동작하도록 라이브러리·폰트를 로컬에서 제공)
-app.use(express.static(path.join(ROOT, 'public')));
+// 화면 파일(html/js/css)은 매번 새로 확인해 예전 캐시가 보이지 않게
+app.use(express.static(path.join(ROOT, 'public'), { setHeaders: (res, p) => { if (/\.(html|js|css)$/.test(p)) res.setHeader('Cache-Control', 'no-cache'); } }));
 app.use('/vendor/tailwind', express.static(nm('@tailwindcss', 'browser', 'dist')));
 app.use('/vendor/marked', express.static(nm('marked')));
 app.use('/vendor/dompurify', express.static(nm('dompurify', 'dist')));

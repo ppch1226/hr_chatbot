@@ -1,11 +1,11 @@
 [
   {
     "id": "employee",
-    "loginId": "kimsky",
+    "loginId": "kim",
     "salt": "e7c646ccd20a5d3f",
     "pwHash": "2bcb8db2ddfed3f4a7353127167ebb2c124f566b9da315e8a7e76b9e2d28e5d1",
     "role": "employee",
-    "name": "김하늘",
+    "name": "김정연",
     "title": "4급 · 팀원",
     "dept": "중소기업지원부",
     "empNo": "2021-0412",
@@ -106,7 +106,7 @@
     "salt": "46baee7da792d1f6",
     "pwHash": "d226a029627fb41aa9bd4de18988fab0e5a3a33b1576839374555b13526558de",
     "role": "admin",
-    "name": "정해윤",
+    "name": "정해용",
     "title": "2급 · 팀장",
     "dept": "인사부 노무·제도팀",
     "empNo": "2012-0087",

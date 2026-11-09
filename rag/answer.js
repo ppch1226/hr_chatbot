@@ -232,7 +232,7 @@ async function answer({ question, role = 'employee', sessionId = 'default', anon
             maxTokens: 1800,
             onDelta: (d) => {
               if (prof.firstToken == null) prof.firstToken = Date.now() - t0;
-              onEvent({ type: 'delta', text: d });
+              onEvent({ type: 'delta', text: d.replace(/인사해삐\s?M/g, '인사해삐m') });
             },
           })
         : chat(messages, { maxTokens: 1800 })
@@ -264,6 +264,8 @@ async function answer({ question, role = 'employee', sessionId = 'default', anon
     .replace(/\[(\d{1,2})\s*-\s*[^\]]{1,8}\]/g, '[$1]')
     .replace(/\[(\d{1,2}(?:\s*,\s*\d{1,2})+)\]/g, (m, list) => list.split(',').map((n) => `[${n.trim()}]`).join(''));
   if (caseText) out.text += '\n\n' + caseText;
+  // 챗봇 이름 표기 통일: 인사해삐M → 인사해삐m
+  out.text = out.text.replace(/인사해삐\s?M/g, '인사해삐m');
 
   // 대화 이력에는 근거 블록 없이 질문/답변만 보관
   if (!anonymous) {
