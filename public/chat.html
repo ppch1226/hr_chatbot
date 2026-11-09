@@ -35,8 +35,7 @@
           <div class="flex items-center gap-4">
             <img data-mascot class="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0" alt="">
             <div>
-              <div class="flex items-center gap-2"><h3 class="text-base sm:text-lg font-extrabold text-slate-900" data-bot></h3>
-                <span class="px-2 py-0.5 rounded-full bg-red-50 text-[#E60012] text-[11px] font-bold border border-red-200">2026 최신판</span></div>
+              <div class="flex items-center gap-2"><h3 class="text-base sm:text-lg font-extrabold text-slate-900" data-bot></h3></div>
               <p class="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5"><span id="live-dot" class="w-2 h-2 rounded-full bg-slate-300"></span><span id="live-text">연결 확인 중…</span></p>
             </div>
           </div>
@@ -46,7 +45,7 @@
           </div>
         </div>
 
-        <div id="stream" class="flex-1 p-5 sm:p-8 overflow-y-auto bg-gradient-to-b from-slate-50/30 to-white"></div>
+        <div id="stream" class="flex-1 p-4 sm:p-6 overflow-y-auto bg-gradient-to-b from-slate-50/30 to-white"></div>
 
         <div class="p-4 sm:p-6 border-t border-slate-100 bg-white space-y-3.5">
           <div id="chips" class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none"></div>
@@ -134,9 +133,9 @@ if (HR.guard() && HR.requireConsent()) {
 
   function welcome() {
     stream.innerHTML = `
-      <div class="min-h-full flex flex-col items-center justify-center py-4 px-2 sm:px-4 text-center max-w-3xl mx-auto">
-        <img src="${HR.mascot()}" alt="${HR.botName()} 마스코트" class="w-28 h-28 sm:w-36 sm:h-36 mb-3 select-none pointer-events-none">
-        <h2 class="text-[22px] sm:text-2xl font-extrabold text-slate-900 tracking-tight mb-4">안녕하세요, ${HR.esc(HR.name())}님! 무엇이 궁금하신가요?</h2>
+      <div class="min-h-full flex flex-col items-center justify-center py-1 px-2 sm:px-4 text-center max-w-3xl mx-auto">
+        <img src="${HR.mascot()}" alt="${HR.botName()} 마스코트" class="w-20 h-20 sm:w-24 sm:h-24 mb-2 select-none pointer-events-none [@media(max-height:820px)]:hidden">
+        <h2 class="text-xl sm:text-[22px] font-extrabold text-slate-900 tracking-tight mb-3">안녕하세요, ${HR.esc(HR.name())}님! 무엇이 궁금하신가요?</h2>
         <div id="suggest" class="w-full max-w-2xl"></div>
       </div>`;
     loadSuggest();
@@ -150,9 +149,9 @@ if (HR.guard() && HR.requireConsent()) {
       suggestCache = suggestCache || (await HR.api(`/api/suggest?user=${encodeURIComponent(HR.name())}&role=${admin ? 'admin' : 'employee'}&recent=${encodeURIComponent(HR.recentTopics().join(','))}`)).items;
     } catch { suggestCache = []; }
     if (!suggestCache.length) { box.innerHTML = '<p class="text-sm text-slate-500">아래 추천 키워드를 누르거나 직접 질문해 보세요.</p>'; return; }
-    box.innerHTML = `<p class="text-sm font-bold text-slate-700 mb-3">${HR.esc(HR.name())}님을 위한 맞춤 질문이에요!</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">${suggestCache.map((x, i) => `
-        <button type="button" data-q="${HR.esc(x.q)}" class="sq group text-left flex items-start gap-3 px-4 py-3.5 rounded-2xl bg-white border border-slate-200 hover:border-red-300 hover:bg-red-50/40 hover:shadow-sm transition-all">
+    box.innerHTML = `<p class="text-sm font-bold text-slate-700 mb-2.5">${HR.esc(HR.name())}님을 위한 맞춤 질문이에요!</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left">${suggestCache.map((x, i) => `
+        <button type="button" data-q="${HR.esc(x.q)}" class="sq group text-left flex items-start gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200 hover:border-red-300 hover:bg-red-50/40 hover:shadow-sm transition-all">
           <span class="text-sm font-extrabold text-[#E60012] shrink-0 leading-6">Q${i + 1}</span>
           <span class="min-w-0"><span class="block text-sm font-semibold text-slate-800 leading-6 break-keep group-hover:text-slate-900">${HR.esc(x.q)}</span>
             <span class="inline-block mt-1 text-[10.5px] font-semibold text-slate-400">#${HR.esc(x.tag)}</span></span>
