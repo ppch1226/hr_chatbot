@@ -7,215 +7,700 @@
 <script src="/vendor/tailwind/index.global.js"></script>
 <script src="/js/common.js"></script>
 <title>마이페이지 - KT IS 인사해삐</title>
+<style>
+  .cal-cell { min-height: 104px; }
+  .modal-in { animation: modalIn .18s ease-out; }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+</style>
 </head>
 <body class="min-h-screen flex flex-col relative">
 <main class="relative z-20 flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 flex flex-col">
-  <div class="w-full max-w-3xl mx-auto py-6 sm:py-10 flex flex-col items-center">
+
+  <!-- ═════════ 개인정보 동의 (동의 전 · 동의 철회 후에만 표시) ═════════ -->
+  <section id="gate" class="hidden w-full max-w-3xl mx-auto py-6 sm:py-10 flex-col items-center">
     <div class="text-center mb-8">
       <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-[#e60012] border border-red-200 mb-3"><span class="material-symbols-outlined text-[16px]">lock</span>안전한 대화 환경 설정</div>
       <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 break-keep"><span data-bot></span>와 대화를 시작하기 전, 몇 가지 설정이 필요해요</h1>
       <p class="text-sm sm:text-base text-slate-500">임직원 여러분의 소중한 개인정보와 사생활을 철저히 보호합니다.</p>
     </div>
-
-    <div class="w-full bg-white rounded-3xl shadow-xl border border-slate-200/90 p-6 sm:p-10 space-y-8 ring-1 ring-black/5">
-      <!-- 내 정보 -->
-      <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80">
-        <div id="me-initials" class="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm ring-2 ring-red-500/20 shrink-0"></div>
-        <div class="min-w-0 flex-1">
-          <div class="text-base font-bold text-slate-900" id="me-name"></div>
-          <div class="text-xs text-slate-500">사내인사포털 로그인됨 · <span id="me-role"></span></div>
-        </div>
-        <span id="consent-badge" class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full border shrink-0"></span>
+    <div class="w-full bg-white rounded-3xl shadow-xl border border-slate-200/90 p-6 sm:p-10 space-y-6 ring-1 ring-black/5">
+      <div class="flex items-center gap-2 pb-1 border-b border-slate-100">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900">개인정보 수집 및 이용 동의</h2>
+        <span class="text-xs font-semibold text-[#E60012] bg-red-50 px-2 py-0.5 rounded-full border border-red-200">필수 선택</span>
       </div>
-
-      <div class="space-y-4">
-        <div class="flex items-center gap-2 pb-1 border-b border-slate-100">
-          <h2 class="text-base sm:text-lg font-bold text-slate-900">개인정보 수집 및 이용 동의</h2>
-          <span class="text-xs font-semibold text-[#E60012] bg-red-50 px-2 py-0.5 rounded-full border border-red-200">필수 선택</span>
+      <div class="flex flex-col sm:flex-row items-start gap-5">
+        <img data-mascot alt="마스코트" class="w-28 sm:w-32 mx-auto sm:mx-0 shrink-0 object-contain select-none">
+        <div class="flex-1 w-full space-y-4">
+          <div class="relative bg-white border-2 border-red-100 rounded-3xl p-6 text-slate-800 shadow-md leading-relaxed">
+            <div class="flex items-center gap-2 mb-3"><span class="font-extrabold text-[#E60012] text-base sm:text-lg" data-bot></span>
+              <span class="text-xs font-bold text-[#E60012] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">온보딩 가이드</span></div>
+            <p class="text-lg font-medium leading-relaxed break-keep">안녕하세요! 개인 맞춤형 인사정보 및 상담을 제공하는 AI 챗봇 서비스 이용을 위해 <span class="text-[#E60012] font-semibold">개인정보 수집 및 이용에 동의</span>하시겠습니까?</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button id="btn-agree" type="button"><span class="material-symbols-outlined text-[18px]">check_circle</span>동의합니다</button>
+            <button id="btn-disagree" type="button"><span class="material-symbols-outlined text-[18px]">cancel</span>동의하지 않습니다</button>
+          </div>
+          <div class="privacy-box"></div>
         </div>
-        <div class="flex flex-col sm:flex-row items-start gap-5 pt-2">
-          <div class="shrink-0 flex items-center justify-center w-28 sm:w-32 mx-auto sm:mx-0"><img data-mascot alt="마스코트" class="w-full h-auto object-contain select-none"></div>
-          <div class="flex-1 w-full space-y-4">
-            <div class="relative bg-white border-2 border-red-100 rounded-3xl p-6 sm:p-7 text-slate-800 shadow-md leading-relaxed ring-1 ring-black/5">
-              <div class="absolute -left-2.5 top-6 w-3 h-3 bg-white border-l-2 border-b-2 border-red-100 rotate-45 hidden sm:block"></div>
-              <div class="flex items-center gap-2 mb-3">
-                <span class="font-extrabold text-[#E60012] text-base sm:text-lg">🐰 <span data-bot></span></span>
-                <span class="text-xs font-bold text-[#E60012] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">온보딩 가이드</span>
-              </div>
-              <p class="text-lg sm:text-xl font-medium leading-relaxed text-slate-800 break-keep">안녕하세요! 개인 맞춤형 인사정보 및 상담을 제공하는 AI 챗봇 서비스 이용을 위해 <span class="text-[#E60012] font-semibold">개인정보 수집 및 이용에 동의</span>하시겠습니까?</p>
+      </div>
+      <button id="btn-start" type="button" class="w-full py-4 px-6 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 transition-all">
+        <span class="material-symbols-outlined text-[22px]">forum</span><span id="start-label"></span><span class="material-symbols-outlined text-[20px]">arrow_forward</span></button>
+      <p class="text-xs text-slate-400 text-center">동의는 이 브라우저에 저장되고, 마이페이지 › 개인정보 동의 관리에서 언제든 철회할 수 있어요.</p>
+    </div>
+  </section>
+
+  <!-- ═════════ 마이페이지 대시보드 ═════════ -->
+  <section id="dash" class="hidden flex-col">
+    <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-7 border-b border-slate-200/80 gap-4">
+      <h1 id="page-title" class="text-2xl font-extrabold text-slate-900 tracking-tight">마이페이지 대시보드</h1>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <a href="#privacy" class="flex items-center gap-2 text-xs text-slate-500 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm hover:border-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span><span class="font-medium">개인정보 수집·이용 : <strong class="text-slate-800">동의 완료</strong></span></a>
+        <a href="/chat.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#E60012] hover:bg-[#B7000C] shadow-sm"><span class="material-symbols-outlined text-[17px]">chat_bubble</span>챗봇으로 바로 질문하기</a>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] gap-7 items-start">
+      <!-- 왼쪽: 프로필 · 활동 메트릭 · 빠른 이동 -->
+      <aside class="space-y-5 lg:sticky lg:top-6">
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 overflow-hidden relative">
+          <div class="absolute top-0 inset-x-0 h-20 bg-gradient-to-br from-rose-50 via-red-50/40 to-blue-50/40 border-b border-slate-100"></div>
+          <div class="relative flex flex-col items-center text-center pt-2">
+            <button type="button" id="avatar-btn" title="마스코트 변경" class="relative group">
+              <img data-avatar alt="프로필 캐릭터" class="w-32 h-32 object-contain transition-transform group-hover:scale-105 duration-300">
+            </button>
+            <div class="mt-2.5 flex items-center justify-center gap-2">
+              <h2 id="me-name" class="text-lg font-extrabold text-slate-900 tracking-tight"></h2>
+              <span id="me-grade" class="hidden px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200/60 whitespace-nowrap"></span>
             </div>
-            <div class="grid grid-cols-2 gap-3">
-              <button id="btn-agree" type="button" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 text-sm transition-all"><span class="material-symbols-outlined text-[18px]">check_circle</span>동의합니다</button>
-              <button id="btn-disagree" type="button" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 text-sm transition-all"><span class="material-symbols-outlined text-[18px]">cancel</span>동의하지 않습니다</button>
-            </div>
-            <div class="bg-slate-50/60 rounded-xl border border-slate-200/80 overflow-hidden text-xs">
-              <button id="btn-details" type="button" aria-expanded="false" class="w-full flex items-center justify-between p-3 text-slate-600 hover:text-slate-900 font-medium">
-                <span class="flex items-center gap-1.5 text-slate-700 font-semibold"><span class="material-symbols-outlined text-[16px] text-slate-400">info</span>개인정보 수집·이용 안내 자세히 보기</span>
-                <span id="privacy-chevron" class="material-symbols-outlined text-[18px] transition-transform">expand_more</span>
-              </button>
-              <div id="privacy-details-box" class="hidden px-4 pb-3.5 pt-1 text-slate-500 space-y-1.5 border-t border-slate-200/60">
-                <div class="flex items-start gap-2"><span class="font-semibold text-slate-700 shrink-0">• 수집 항목:</span><span>사번, 성명, 소속부서, 직급 (사내 인사 시스템 연동 정보)</span></div>
-                <div class="flex items-start gap-2"><span class="font-semibold text-slate-700 shrink-0">• 이용 목적:</span><span>본인 확인, 잔여 연차·복지포인트 등 맞춤형 인사 정보 안내 및 규정 상담</span></div>
-                <div class="flex items-start gap-2"><span class="font-semibold text-slate-700 shrink-0">• 보유 기간:</span><span>로그아웃 또는 세션 만료 시 즉시 파기 (법령 및 취업규칙 준수)</span></div>
-              </div>
-            </div>
+            <p class="text-xs font-semibold text-slate-600 flex items-center justify-center gap-1 mt-1"><span class="material-symbols-outlined text-[14px] text-[#E60012]">verified</span><span id="me-role"></span></p>
+            <div class="mt-3.5 w-full bg-slate-50 rounded-xl py-2.5 border border-slate-100"><span id="char-name" class="text-sm font-bold text-slate-900"></span></div>
+            <button type="button" id="char-open" class="w-full mt-3 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-md active:scale-95 group">
+              ✨ 나와 맞는 마스코트 변경<span class="material-symbols-outlined text-[15px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span></button>
           </div>
         </div>
-      </div>
 
-      <div class="pt-4 space-y-3">
-        <button id="btn-start-chat" type="button" class="w-full py-4 px-6 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 transition-all">
-          <span class="material-symbols-outlined text-[22px]">forum</span><span id="start-label">채팅 시작하기</span><span class="material-symbols-outlined text-[20px]">arrow_forward</span>
-        </button>
-        <div class="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-1 px-1">
-          <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-emerald-500">verified_user</span>입력하신 정보는 상담 목적 외에는 이용되지 않으며 철저히 보호됩니다.</span>
-          <span>마이페이지에서 언제든 설정 변경 가능</span>
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2"><span class="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center"><span class="material-symbols-outlined text-[16px]">insights</span></span>
+              <h3 class="text-xs font-bold text-slate-900">질문 활동 메트릭</h3></div>
+            <span id="metric-total" class="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60"></span>
+          </div>
+          <div id="metric-bars" class="space-y-3"></div>
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>최근 질의일: <strong id="metric-last" class="text-slate-800">-</strong></span>
+            <span class="text-emerald-600 font-semibold flex items-center gap-0.5"><span class="material-symbols-outlined text-[14px]">shield</span>익명 질문 제외</span>
+          </div>
+        </div>
+
+        <nav class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-3">
+          <div class="px-3 pt-2 pb-2 text-[11px] font-bold tracking-wider text-slate-400">QUICK NAVIGATION</div>
+          <div id="quick-nav" class="space-y-0.5"></div>
+        </nav>
+      </aside>
+
+      <!-- 오른쪽: 화면 -->
+      <div class="min-w-0">
+        <!-- 나의 질문기록 -->
+        <div data-view="history" class="space-y-7">
+          <section class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
+              <div class="flex items-center gap-2.5"><span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200/80"><span class="material-symbols-outlined text-[20px]">history_edu</span></span>
+                <h2 class="text-base font-extrabold text-slate-900">나의 질문기록</h2><span id="h-count" class="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60 whitespace-nowrap"></span></div>
+              <span class="flex items-center gap-1.5 text-[11px] text-slate-500 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200/80 self-start sm:self-auto"><span class="material-symbols-outlined text-[15px]">shield</span>익명 질문은 기록되지 않아요</span>
+            </div>
+            <div class="relative mb-4"><span class="material-symbols-outlined absolute left-3.5 top-2.5 text-[18px] text-slate-400">search</span>
+              <input id="h-search" class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#E60012] focus:bg-white" placeholder="질문 내용, 근거 규정, 키워드 검색 (예: 연차, 육아휴직, 복지포인트)"></div>
+            <div id="h-tabs" class="flex items-center gap-1.5 overflow-x-auto pb-1 mb-5 scrollbar-none"></div>
+            <div id="h-list" class="space-y-3.5"></div>
+            <button id="h-more" type="button" class="hidden w-full mt-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[18px]">expand_more</span><span></span></button>
+            <div class="mt-5 p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 flex items-start gap-2.5 text-xs text-slate-600 leading-relaxed">
+              <span class="material-symbols-outlined text-[18px] text-slate-400">lock</span>
+              <span><strong class="text-slate-800">익명 질문 보호 정책:</strong> 채팅에서 '익명으로 질문하기'를 켜고 물어본 질문은 이 기록에 남지 않아요. 기록은 본인만 볼 수 있고, 항목별로 언제든 삭제할 수 있어요.</span>
+            </div>
+          </section>
+        </div>
+
+        <!-- 일정 (캘린더) -->
+        <div data-view="calendar" class="hidden space-y-6">
+          <section class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
+              <div class="flex items-center gap-2.5"><span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200/80"><span class="material-symbols-outlined text-[20px]">calendar_month</span></span>
+                <h2 class="text-base font-extrabold text-slate-900">일정</h2><span class="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60 whitespace-nowrap">공휴일 · 사내 일정 · 개정 시행일</span></div>
+              <button id="ev-add" type="button" class="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#E60012] hover:bg-[#B7000C] shadow-sm self-start sm:self-auto"><span class="material-symbols-outlined text-[17px]">add</span>일정 직접 추가</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div class="p-5 rounded-2xl bg-red-50/50 border border-red-200/70">
+                <div class="flex items-center justify-between gap-2"><span class="flex items-center gap-2 text-sm font-bold text-slate-800"><span class="w-8 h-8 rounded-lg bg-white border border-red-100 flex items-center justify-center text-[#E60012]"><span class="material-symbols-outlined text-[18px]">beach_access</span></span>나의 남은 연차</span>
+                  <span id="lv-planned" class="text-[11px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-full border border-slate-200"></span></div>
+                <div class="mt-3 flex items-baseline gap-2"><span id="lv-remain" class="text-3xl font-extrabold text-[#E60012]"></span><span id="lv-detail" class="text-sm text-slate-600"></span></div>
+                <p class="mt-1.5 text-xs text-slate-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">info</span><span id="lv-deadline"></span></p>
+              </div>
+              <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                <div class="flex items-center justify-between gap-2"><span class="flex items-center gap-2 text-sm font-bold text-slate-800"><span class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600"><span class="material-symbols-outlined text-[18px]">celebration</span></span>다음 공휴일까지</span>
+                  <span id="hd-d" class="text-xs font-extrabold text-white bg-[#E60012] px-2.5 py-0.5 rounded-full"></span></div>
+                <div id="hd-name" class="mt-3 text-xl font-extrabold text-slate-900"></div>
+                <p class="mt-1.5 text-xs text-slate-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">info</span>법정 공휴일(대체공휴일 포함) 기준</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px] gap-5">
+              <div class="rounded-2xl border border-slate-200 p-3 sm:p-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                  <div class="flex items-center gap-2">
+                    <button id="cal-prev" type="button" title="이전 달" class="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center"><span class="material-symbols-outlined text-[18px]">chevron_left</span></button>
+                    <span id="cal-title" class="text-lg font-extrabold text-slate-900 w-24 text-center tabular-nums"></span>
+                    <button id="cal-next" type="button" title="다음 달" class="w-8 h-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center"><span class="material-symbols-outlined text-[18px]">chevron_right</span></button>
+                    <button id="cal-today" type="button" class="ml-1 px-3 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700">이번 달</button>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#E60012]"></span>연차/휴가</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span>사내일정</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>직접추가</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-300"></span>공휴일</span>
+                  </div>
+                </div>
+                <div class="grid grid-cols-7 text-center text-xs font-bold border-b border-slate-200 pb-2">
+                  <span class="text-[#E60012]">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-600">토</span></div>
+                <div id="cal-grid" class="grid grid-cols-7 gap-px bg-slate-100 border border-slate-100 rounded-b-xl overflow-hidden mt-px"></div>
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <span>* 날짜를 누르면 상세 일정을 볼 수 있어요. 연차·사내 일정은 시연용 예시예요.</span>
+                  <a id="ehr-leave" class="font-bold text-[#E60012] hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">event_available</span>연차 신청 방법 묻기</a>
+                </div>
+              </div>
+              <div class="rounded-2xl border border-slate-200 p-4 bg-slate-50/50 h-fit">
+                <div id="day-title" class="text-sm font-extrabold text-slate-900 mb-3"></div>
+                <div id="day-list" class="space-y-2.5"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 직급별 질문 통계 -->
+        <div data-view="stats" class="hidden space-y-6">
+          <section class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
+              <div class="flex items-center gap-2.5"><span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200/80"><span class="material-symbols-outlined text-[20px]">bar_chart</span></span>
+                <h2 class="text-base font-extrabold text-slate-900">직급별 많이 질문한 분야 통계</h2><span class="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60 whitespace-nowrap">전사 집계</span></div>
+            </div>
+            <div id="gs-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+            <p id="gs-note" class="mt-4 text-[11px] text-slate-400"></p>
+          </section>
+        </div>
+
+        <!-- 정합성 분석 기록 (담당자 전용) -->
+        <div data-view="compliance" class="hidden space-y-6">
+          <section class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
+              <div class="flex items-start gap-2.5"><span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200/80 shrink-0"><span class="material-symbols-outlined text-[20px]">gavel</span></span>
+                <div><div class="flex flex-wrap items-center gap-2"><h2 class="text-base font-extrabold text-slate-900">법령·사규 정합성 분석 및 알림 발송 기록</h2><span class="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60">AI 정합성 모니터링</span></div>
+                  <p class="text-xs text-slate-400 mt-0.5">노동법 개정에 따른 사규 정합성 AI 분석과 담당자 알림 발송 누적 기록</p></div></div>
+              <a href="/compliance.html" class="inline-flex items-center gap-1 text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200/80 self-start sm:self-auto whitespace-nowrap"><span class="material-symbols-outlined text-[16px]">open_in_new</span>컴플라이언스 관리</a>
+            </div>
+            <div id="cp-cards" class="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-6"></div>
+            <div class="relative mb-3"><span class="material-symbols-outlined absolute left-3.5 top-2.5 text-[18px] text-slate-400">search</span>
+              <input id="cp-search" class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#E60012] focus:bg-white" placeholder="법령명, 사규명, 키워드 검색 (예: 근로기준법, 육아휴직)"></div>
+            <div id="cp-filters" class="flex items-center gap-1.5 overflow-x-auto pb-1 mb-5 text-xs scrollbar-none"></div>
+            <div id="cp-list" class="space-y-3.5"></div>
+          </section>
+        </div>
+
+        <!-- 알림 맞춤 설정 -->
+        <div data-view="prefs" class="hidden">
+          <section id="pref-card" class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-8 space-y-7">
+            <div class="flex flex-wrap items-center gap-2 pb-4 border-b border-slate-100">
+              <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200/80"><span class="material-symbols-outlined text-[20px]">notifications_active</span></span>
+              <h2 class="text-base font-extrabold text-slate-900">알림 맞춤 설정</h2>
+              <span class="text-xs text-slate-500">규정이 바뀌면 나와 관련된 내용을 먼저 알려드려요</span>
+            </div>
+            <section class="space-y-3">
+              <h3 class="text-sm font-bold text-slate-800">기본 정보 <span class="font-normal text-slate-400 text-xs">— 특정 직급·직위·근무지에만 적용되는 개정을 골라내요</span></h3>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label class="text-xs font-semibold text-slate-600 space-y-1.5"><span>직급</span><select id="p-grade" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 bg-white focus:border-[#E60012] outline-none"></select></label>
+                <label class="text-xs font-semibold text-slate-600 space-y-1.5"><span>직위</span><select id="p-position" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 bg-white focus:border-[#E60012] outline-none"></select></label>
+                <label class="text-xs font-semibold text-slate-600 space-y-1.5"><span>근무지</span><select id="p-location" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 bg-white focus:border-[#E60012] outline-none"></select></label>
+              </div>
+            </section>
+            <section class="space-y-3">
+              <h3 class="text-sm font-bold text-slate-800">관심 주제 <span class="font-normal text-slate-400 text-xs">— 여러 개 선택</span></h3>
+              <div id="p-topics" class="flex flex-wrap gap-2"></div>
+            </section>
+            <section class="space-y-3 rounded-2xl border border-amber-200 bg-amber-50/50 p-4 sm:p-5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-amber-600">lock</span>개인 상황 <span class="font-normal text-slate-500 text-xs">(선택)</span></h3>
+                <button id="p-sit-clear" type="button" class="text-xs font-semibold text-slate-500 hover:text-[#E60012]">개인 상황 모두 지우기</button>
+              </div>
+              <p class="text-[11px] text-slate-600 leading-relaxed">임신·육아·휴직처럼 민감할 수 있는 정보예요. <strong>원할 때만</strong> 선택하세요. 관련 개정 알림을 고르는 데만 쓰이고, 다른 사람에게 보이지 않으며 언제든 지울 수 있어요.</p>
+              <div id="p-situations" class="flex flex-wrap gap-2"></div>
+            </section>
+            <div class="rounded-xl bg-slate-50 border border-slate-200 p-3.5 flex items-start gap-2 text-[11px] text-slate-600">
+              <span class="material-symbols-outlined text-[16px] text-slate-400">history</span>
+              <span>최근에 챗봇에 물어본 <strong>주제</strong>(예: 휴가·휴직)도 알림 판단과 추천 질문에 참고해요. 질문 내용이 아니라 주제만, 이 브라우저에만 저장돼요.
+                <button id="p-recent-clear" type="button" class="ml-1 font-semibold text-slate-500 hover:text-[#E60012] underline">지우기</button> <span id="p-recent" class="text-slate-400"></span></span>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span id="p-saved" class="text-xs text-slate-400"></span>
+              <button id="p-save" type="button" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#111827] hover:bg-[#E60012] text-white font-bold text-sm flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-[18px]">save</span>설정 저장</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- 개인정보 동의 관리 -->
+        <div data-view="privacy" class="hidden">
+          <section class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-8 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
+              <div class="flex items-center gap-2.5"><span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200/80"><span class="material-symbols-outlined text-[20px]">verified_user</span></span>
+                <h2 class="text-base font-extrabold text-slate-900">개인정보 수집·이용 동의</h2></div>
+              <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border text-emerald-700 bg-emerald-50 border-emerald-200"><span class="material-symbols-outlined text-[14px]">verified_user</span>동의 완료</span>
+            </div>
+            <p class="text-sm text-slate-600 leading-relaxed break-keep">개인 맞춤형 인사정보 안내와 상담을 위해 아래 정보를 수집·이용하는 데 동의하셨어요. 동의를 철회하면 챗봇을 이용할 수 없어요.</p>
+            <div class="privacy-box"></div>
+            <div class="flex justify-end"><button id="btn-withdraw" type="button" class="px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-600 hover:border-[#E60012] hover:text-[#E60012]">동의 철회</button></div>
+          </section>
         </div>
       </div>
     </div>
+  </section>
+</main>
 
-    <!-- 알림 맞춤 설정: "나와 관련된" 규정 개정 알림 판단에 사용 -->
-    <div id="pref-card" class="w-full mt-8 bg-white rounded-3xl shadow-xl border border-slate-200/90 p-6 sm:p-10 space-y-7 ring-1 ring-black/5">
-      <div class="flex flex-wrap items-center gap-2 pb-1 border-b border-slate-100">
-        <span class="material-symbols-outlined text-[22px] text-[#E60012]">notifications_active</span>
-        <h2 class="text-base sm:text-lg font-bold text-slate-900">알림 맞춤 설정</h2>
-        <span class="text-xs text-slate-500">규정이 바뀌면 나와 관련된 내용을 먼저 알려드려요</span>
-      </div>
-
-      <section class="space-y-3">
-        <h3 class="text-sm font-bold text-slate-800">기본 정보 <span class="font-normal text-slate-400 text-xs">— 특정 직급·직위·근무지에만 적용되는 개정을 골라내요</span></h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <label class="text-xs font-semibold text-slate-600 space-y-1.5"><span>직급</span><select id="p-grade" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 bg-white focus:border-[#E60012] outline-none"></select></label>
-          <label class="text-xs font-semibold text-slate-600 space-y-1.5"><span>직위</span><select id="p-position" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 bg-white focus:border-[#E60012] outline-none"></select></label>
-          <label class="text-xs font-semibold text-slate-600 space-y-1.5"><span>근무지</span><select id="p-location" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 bg-white focus:border-[#E60012] outline-none"></select></label>
-        </div>
-      </section>
-
-      <section class="space-y-3">
-        <h3 class="text-sm font-bold text-slate-800">관심 주제 <span class="font-normal text-slate-400 text-xs">— 여러 개 선택</span></h3>
-        <div id="p-topics" class="flex flex-wrap gap-2"></div>
-      </section>
-
-      <section class="space-y-3 rounded-2xl border border-amber-200 bg-amber-50/50 p-4 sm:p-5">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-amber-600">lock</span>개인 상황 <span class="font-normal text-slate-500 text-xs">(선택)</span></h3>
-          <button id="p-sit-clear" type="button" class="text-xs font-semibold text-slate-500 hover:text-[#E60012]">개인 상황 모두 지우기</button>
-        </div>
-        <p class="text-[11px] text-slate-600 leading-relaxed">임신·육아·휴직처럼 민감할 수 있는 정보예요. <strong>원할 때만</strong> 선택하세요. 관련 개정 알림을 고르는 데만 쓰이고, 다른 사람에게 보이지 않으며 언제든 지울 수 있어요.</p>
-        <div id="p-situations" class="flex flex-wrap gap-2"></div>
-      </section>
-
-      <div class="rounded-xl bg-slate-50 border border-slate-200 p-3.5 flex items-start gap-2 text-[11px] text-slate-600">
-        <span class="material-symbols-outlined text-[16px] text-slate-400">history</span>
-        <span>최근에 챗봇에 물어본 <strong>주제</strong>(예: 휴가·휴직)도 알림 판단에 참고해요. 질문 내용이 아니라 주제만, 이 브라우저에만 저장돼요.
-          <button id="p-recent-clear" type="button" class="ml-1 font-semibold text-slate-500 hover:text-[#E60012] underline">지우기</button> <span id="p-recent" class="text-slate-400"></span></span>
-      </div>
-
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-        <span id="p-saved" class="text-xs text-slate-400"></span>
-        <button id="p-save" type="button" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#111827] hover:bg-[#E60012] text-white font-bold text-sm flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-[18px]">save</span>설정 저장</button>
-      </div>
+<!-- 마스코트 변경 -->
+<div id="char-modal" class="hidden fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="modal-in bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 pt-5 pb-3">
+      <h3 class="text-lg font-extrabold text-slate-900">나와 맞는 마스코트 고르기</h3>
+      <button type="button" data-close class="w-9 h-9 rounded-xl text-slate-400 hover:bg-slate-100 flex items-center justify-center"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div class="px-6 pb-6">
+      <div id="char-current" class="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-rose-50 to-white border border-red-100"></div>
+      <div class="mt-5 mb-3 text-xs font-bold text-slate-500">다른 마스코트 <span class="font-medium text-slate-400">— 눌러서 바로 적용</span></div>
+      <div id="char-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-3"></div>
     </div>
   </div>
-</main>
+</div>
+
+<!-- 일정 추가 -->
+<div id="ev-modal" class="hidden fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+  <form id="ev-form" class="modal-in bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+    <div class="flex items-center justify-between"><h3 class="text-lg font-extrabold text-slate-900">일정 직접 추가</h3>
+      <button type="button" data-close class="w-9 h-9 rounded-xl text-slate-400 hover:bg-slate-100 flex items-center justify-center"><span class="material-symbols-outlined">close</span></button></div>
+    <label class="block text-xs font-semibold text-slate-600 space-y-1.5"><span>날짜</span><input id="ev-date" type="date" required class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-[#E60012] outline-none"></label>
+    <label class="block text-xs font-semibold text-slate-600 space-y-1.5"><span>제목</span><input id="ev-title" required maxlength="40" placeholder="예: 건강검진" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-[#E60012] outline-none"></label>
+    <label class="block text-xs font-semibold text-slate-600 space-y-1.5"><span>메모 <span class="font-normal text-slate-400">(선택)</span></span><textarea id="ev-memo" rows="2" maxlength="200" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-[#E60012] outline-none"></textarea></label>
+    <button class="w-full py-3 rounded-xl bg-[#E60012] hover:bg-[#B7000C] text-white font-bold text-sm">추가</button>
+  </form>
+</div>
 
 <script>
 if (HR.guard()) {
   HR.layout('/mypage.html');
+  const admin = HR.isAdmin();
+  const who = { user: HR.name(), role: admin ? 'admin' : 'employee' };
+  const qs = `user=${encodeURIComponent(who.user)}&role=${who.role}`;
+  const $ = (id) => document.getElementById(id);
   document.querySelectorAll('[data-bot]').forEach((e) => (e.textContent = HR.botName()));
   document.querySelectorAll('[data-mascot]').forEach((e) => (e.src = HR.mascot()));
-  document.getElementById('me-initials').textContent = HR.name().slice(0, 2);
-  document.getElementById('me-name').textContent = HR.name() + '님';
-  document.getElementById('me-role').textContent = HR.isAdmin() ? '인사담당자' : '임직원';
-
+  document.querySelectorAll('.privacy-box').forEach((el) => (el.innerHTML = `
+    <div class="bg-slate-50/60 rounded-xl border border-slate-200/80 p-4 text-xs text-slate-500 space-y-1.5">
+      <div class="flex items-start gap-2"><span class="font-semibold text-slate-700 shrink-0">• 수집 항목:</span><span>사번, 성명, 소속부서, 직급 (사내 인사 시스템 연동 정보)</span></div>
+      <div class="flex items-start gap-2"><span class="font-semibold text-slate-700 shrink-0">• 이용 목적:</span><span>본인 확인, 잔여 연차·복지포인트 등 맞춤형 인사 정보 안내 및 규정 상담, 본인 질문기록 제공</span></div>
+      <div class="flex items-start gap-2"><span class="font-semibold text-slate-700 shrink-0">• 보유 기간:</span><span>동의 철회 또는 퇴직 시 파기 (익명 질문은 기록하지 않음)</span></div>
+    </div>`));
   const fromGate = new URLSearchParams(location.search).get('next') === 'chat';
-  if (fromGate) HR.toast('채팅을 시작하려면 개인정보 수집·이용 동의가 필요해요.');
 
-  const agreeBtn = document.getElementById('btn-agree');
-  const disagreeBtn = document.getElementById('btn-disagree');
-  const startBtn = document.getElementById('btn-start-chat');
-  const startLabel = document.getElementById('start-label');
-  const badge = document.getElementById('consent-badge');
+  // ─────────────── 개인정보 동의 게이트 (동의 상태는 저장되어 다시 들어와도 유지)
+  let choice = HR.consent();
   const BASE = 'flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 text-sm transition-all ';
   const OFF = 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium';
-
-  // 동의는 사용자가 직접 선택해야 함 (미선택 상태로 시작)
-  let choice = HR.consent(); // 'Y' | 'N' | ''
-
-  function render() {
-    agreeBtn.className = BASE + (choice === 'Y' ? 'border-[#E60012] bg-red-50 text-[#E60012] font-bold shadow-sm' : OFF);
-    disagreeBtn.className = BASE + (choice === 'N' ? 'border-slate-400 bg-slate-100 text-slate-700 font-bold shadow-sm' : OFF);
-    agreeBtn.setAttribute('aria-pressed', choice === 'Y');
-    disagreeBtn.setAttribute('aria-pressed', choice === 'N');
+  function renderGate() {
+    $('btn-agree').className = BASE + (choice === 'Y' ? 'border-[#E60012] bg-red-50 text-[#E60012] font-bold shadow-sm' : OFF);
+    $('btn-disagree').className = BASE + (choice === 'N' ? 'border-slate-400 bg-slate-100 text-slate-700 font-bold shadow-sm' : OFF);
     const ok = choice === 'Y';
-    startBtn.disabled = !ok;
-    startBtn.className = 'w-full py-4 px-6 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 transition-all ' +
-      (ok ? 'bg-[#E60012] hover:bg-red-700 text-white shadow-md cursor-pointer' : 'bg-slate-200 text-slate-400 cursor-not-allowed');
-    startLabel.textContent = ok ? '채팅 시작하기' : choice === 'N' ? '동의 후 채팅을 시작할 수 있습니다' : '동의 여부를 선택해 주세요';
-    const saved = HR.consent();
-    badge.className = 'inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full border shrink-0 ' +
-      (saved === 'Y' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200');
-    badge.innerHTML = saved === 'Y'
-      ? '<span class="material-symbols-outlined text-[14px]">verified_user</span>동의 완료'
-      : '<span class="material-symbols-outlined text-[14px]">pending</span>' + (saved === 'N' ? '미동의' : '선택 전');
+    $('btn-start').disabled = !ok;
+    $('btn-start').className = 'w-full py-4 px-6 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 transition-all ' + (ok ? 'bg-[#E60012] hover:bg-red-700 text-white shadow-md' : 'bg-slate-200 text-slate-400 cursor-not-allowed');
+    $('start-label').textContent = ok ? (fromGate ? '동의하고 채팅 시작하기' : '동의하고 마이페이지로') : choice === 'N' ? '동의 후 이용할 수 있습니다' : '동의 여부를 선택해 주세요';
+  }
+  $('btn-agree').onclick = () => { choice = 'Y'; renderGate(); };
+  $('btn-disagree').onclick = () => { choice = 'N'; HR.setConsent('N'); renderGate(); };
+  $('btn-start').onclick = () => {
+    if (choice !== 'Y') return;
+    HR.setConsent('Y');
+    if (fromGate) return (location.href = '/chat.html');
+    history.replaceState(null, '', '/mypage.html');
+    showDash();
+    HR.toast('동의가 저장되었어요. 다음부터는 바로 마이페이지가 열려요.');
+  };
+  $('btn-withdraw').onclick = () => {
+    if (!confirm('개인정보 수집·이용 동의를 철회할까요? 철회하면 챗봇을 이용할 수 없어요.')) return;
+    HR.setConsent('N'); choice = 'N';
+    $('dash').classList.add('hidden'); $('dash').classList.remove('flex');
+    $('gate').classList.remove('hidden'); $('gate').classList.add('flex'); renderGate();
+    HR.toast('동의를 철회했어요.');
+  };
+
+
+  // ─────────────── 대시보드
+  let started = false;
+  function showDash() {
+    $('gate').classList.add('hidden'); $('gate').classList.remove('flex');
+    $('dash').classList.remove('hidden'); $('dash').classList.add('flex');
+    if (started) return;
+    started = true;
+    initProfile(); loadHistory(); initNav(); route();
+    window.addEventListener('hashchange', route);
   }
 
-  agreeBtn.onclick = () => { choice = 'Y'; render(); };
-  disagreeBtn.onclick = () => {
-    const wasAgreed = HR.consent() === 'Y';
-    choice = 'N'; HR.setConsent('N'); render();
-    if (wasAgreed) HR.toast('동의를 철회했어요. 챗봇 이용이 제한됩니다.');
-  };
-  startBtn.onclick = () => {
-    if (choice !== 'Y') return HR.toast('개인정보 수집 및 이용 동의가 필요합니다.');
-    HR.setConsent('Y');
-    location.href = '/chat.html';
-  };
-  document.getElementById('btn-details').onclick = function () {
-    const box = document.getElementById('privacy-details-box');
-    const open = box.classList.toggle('hidden') === false;
-    this.setAttribute('aria-expanded', open);
-    document.getElementById('privacy-chevron').style.transform = open ? 'rotate(180deg)' : '';
-  };
-  render();
+  // 프로필 카드 + 마스코트
+  function initProfile() {
+    $('me-name').textContent = HR.name();
+    $('me-role').textContent = admin ? '인사담당자 · 인사해삐m' : '임직원 · 인사해삐';
+    paintChar();
+    HR.api(`/api/profile?${qs}`).then(({ profile }) => {
+      const g = [profile.grade, profile.position].filter(Boolean).join(' · ');
+      if (g) { $('me-grade').textContent = g; $('me-grade').classList.remove('hidden'); }
+      myGrade = profile.grade || '';
+    }).catch(() => {});
+  }
+  let myGrade = '';
+  function paintChar() {
+    const c = HR.char();
+    document.querySelectorAll('[data-avatar]').forEach((e) => (e.src = HR.charImg()));
+    $('char-name').textContent = c.name;
+  }
+  function openChars() {
+    const cur = HR.char();
+    $('char-current').innerHTML = `<img src="${HR.charImg(cur)}" alt="" class="w-24 h-24 object-contain shrink-0">
+      <div><span class="text-[11px] font-bold text-[#E60012] bg-white border border-red-200 px-2 py-0.5 rounded-full">현재 적용 중</span>
+        <div class="mt-1.5 text-xl font-extrabold text-slate-900">${cur.name}</div><div class="text-xs text-slate-500">${cur.zodiac} · 프로필과 헤더에 표시돼요</div></div>`;
+    $('char-grid').innerHTML = HR.CHARS.filter((c) => c.id !== cur.id).map((c) => `
+      <button type="button" data-id="${c.id}" class="group flex flex-col items-center gap-1 p-2.5 rounded-2xl border border-slate-200 hover:border-red-300 hover:bg-red-50/40 transition-all">
+        <img src="${HR.charImg(c)}" alt="" loading="lazy" class="w-20 h-20 sm:w-24 sm:h-24 object-contain group-hover:scale-105 transition-transform">
+        <span class="text-xs font-bold text-slate-800">${c.name}</span><span class="text-[10px] text-slate-400">${c.zodiac}</span></button>`).join('');
+    $('char-grid').querySelectorAll('[data-id]').forEach((b) => (b.onclick = () => {
+      HR.setChar(b.dataset.id); paintChar(); closeModal('char-modal');
+      HR.toast(`${HR.char().name}(으)로 바꿨어요.`);
+    }));
+    $('char-modal').classList.remove('hidden');
+  }
+  const closeModal = (id) => $(id).classList.add('hidden');
+  document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => b.closest('.fixed').classList.add('hidden')));
+  ['char-modal', 'ev-modal'].forEach((id) => $(id).addEventListener('click', (e) => e.target.id === id && closeModal(id)));
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && ['char-modal', 'ev-modal'].forEach(closeModal));
+  $('char-open').onclick = openChars; $('avatar-btn').onclick = openChars;
 
-  // ── 알림 맞춤 설정
-  (async () => {
-    const who = { user: HR.name(), role: HR.isAdmin() ? 'admin' : 'employee' };
-    const { profile, options } = await HR.api(`/api/profile?user=${encodeURIComponent(who.user)}&role=${who.role}`);
-    const sel = (id, list, v, empty) => {
-      document.getElementById(id).innerHTML = `<option value="">${empty}</option>` + list.map((x) => `<option ${x === v ? 'selected' : ''}>${HR.esc(x)}</option>`).join('');
-    };
-    sel('p-grade', options.grades, profile.grade, '선택 안 함');
-    sel('p-position', options.positions, profile.position, '선택 안 함');
-    sel('p-location', options.locations, profile.location, '선택 안 함');
+  // 빠른 이동
+  const VIEWS = [
+    { id: 'history', icon: 'history_edu', label: '나의 질문기록', title: '마이페이지 대시보드' },
+    { id: 'calendar', icon: 'calendar_month', label: '일정', title: '사내 일정 & 근태 캘린더' },
+    { id: 'stats', icon: 'bar_chart', label: '직급별 질문 통계', title: '직급별 질문 통계' },
+    ...(admin ? [{ id: 'compliance', icon: 'gavel', label: '정합성 분석 기록', title: '정합성 분석 기록' }] : []),
+    { id: 'notif', icon: 'notifications', label: '사규 개정 알림', href: '/notifications.html' },
+    ...(admin ? [{ id: 'cm', icon: 'verified_user', label: '컴플라이언스 관리', href: '/compliance.html' }] : []),
+    { id: 'prefs', icon: 'tune', label: '알림 맞춤 설정', title: '알림 맞춤 설정' },
+    { id: 'privacy', icon: 'lock', label: '개인정보 동의 관리', title: '개인정보 동의 관리' },
+  ];
+  const navBadge = {};
+  function initNav() {
+    HR.api(`/api/notifications?${qs}&recent=${encodeURIComponent(HR.recentTopics().join(','))}`).then((d) => {
+      const n = d.items.filter((x) => x.kind === 'reg-change' && x.related && !x.read).length;
+      if (n) { navBadge.notif = `<span class="px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-bold">NEW ${n}</span>`; renderNav(); }
+    }).catch(() => {});
+    renderNav();
+  }
+  function renderNav() {
+    const cur = current();
+    $('quick-nav').innerHTML = VIEWS.map((v) => {
+      const on = v.id === cur;
+      return `<a href="${v.href || '#' + v.id}" class="flex items-center justify-between pl-4 pr-3 py-2.5 rounded-xl text-[13px] font-bold border-l-4 transition-all ${on ? 'bg-red-50/70 text-slate-900 border-[#E60012]' : 'text-slate-700 hover:bg-slate-50 border-transparent'}">
+        <span class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[19px] ${on ? 'text-[#E60012]' : 'text-slate-400'}">${v.icon}</span>${v.label}${v.href ? '<span class="material-symbols-outlined text-[13px] text-slate-300">open_in_new</span>' : ''}</span>${navBadge[v.id] || ''}</a>`;
+    }).join('');
+  }
+  const current = () => { const h = location.hash.slice(1); return VIEWS.some((v) => v.id === h && !v.href) ? h : 'history'; };
+  function route() {
+    const v = current();
+    document.querySelectorAll('[data-view]').forEach((el) => el.classList.toggle('hidden', el.dataset.view !== v));
+    $('page-title').textContent = VIEWS.find((x) => x.id === v).title;
+    renderNav();
+    if (v === 'calendar') loadCalendar();
+    if (v === 'stats') loadGradeStats();
+    if (v === 'compliance') loadCompliance();
+    if (v === 'prefs') loadPrefs();
+    if (location.hash) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ─────────────── 나의 질문기록 + 활동 메트릭
+  let hist = [], cats = [], hCat = '전체', hShown = 5;
+  const CAT_COLOR = ['bg-[#E60012]', 'bg-slate-700', 'bg-slate-500', 'bg-slate-400', 'bg-slate-300', 'bg-slate-200'];
+  async function loadHistory() {
+    try { ({ items: hist, categories: cats } = await HR.api(`/api/history?${qs}`)); } catch { hist = []; cats = []; }
+    navBadge.history = hist.length ? `<span class="min-w-[22px] text-center px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">${hist.length}</span>` : '';
+    renderNav(); renderMetrics(); renderHistory();
+  }
+  function renderMetrics() {
+    $('metric-total').textContent = `총 ${hist.length}건`;
+    $('metric-last').textContent = hist[0] ? hist[0].at.slice(0, 10).replace(/-/g, '.') : '-';
+    const counts = cats.map((c) => [c, hist.filter((h) => h.category === c).length]).filter(([, n]) => n).sort((a, b) => b[1] - a[1]);
+    $('metric-bars').innerHTML = counts.length ? counts.slice(0, 5).map(([c, n], i) => {
+      const pct = Math.round((n / hist.length) * 1000) / 10;
+      return `<div><div class="flex items-center justify-between text-[11px] mb-1 font-semibold"><span class="text-slate-600 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${CAT_COLOR[i]}"></span>${c}</span>
+        <span class="text-slate-900">${n}건 <span class="text-slate-400 font-normal">(${pct}%)</span></span></div>
+        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${CAT_COLOR[i]} rounded-full" style="width:${pct}%"></div></div></div>`;
+    }).join('') : '<p class="text-xs text-slate-400 py-2">아직 질문 기록이 없어요. 챗봇에 물어보면 분야별로 집계돼요.</p>';
+  }
+  function renderHistory() {
+    const kw = $('h-search').value.trim().toLowerCase();
+    const tabs = ['전체', ...cats];
+    $('h-tabs').innerHTML = tabs.map((c) => {
+      const n = c === '전체' ? hist.length : hist.filter((h) => h.category === c).length;
+      const on = c === hCat;
+      return `<button type="button" data-c="${c}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${on ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${c} (${n})</button>`;
+    }).join('');
+    $('h-tabs').querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => { hCat = b.dataset.c; hShown = 5; renderHistory(); }));
+    const list = hist.filter((h) => (hCat === '전체' || h.category === hCat) && (!kw || `${h.question} ${h.answer} ${h.basis.join(' ')}`.toLowerCase().includes(kw)));
+    $('h-count').textContent = `${list.length}건`;
+    $('h-list').innerHTML = list.length ? list.slice(0, hShown).map((h, i) => `
+      <article class="border border-slate-200 rounded-2xl overflow-hidden bg-white hover:border-slate-300 transition-all">
+        <button type="button" data-toggle class="w-full text-left p-4 sm:p-5 flex items-start justify-between gap-3">
+          <span class="min-w-0"><span class="flex flex-wrap items-center gap-2 mb-1.5"><span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 whitespace-nowrap">${HR.esc(h.category)}</span>
+            <span class="text-[11px] text-slate-400 font-mono">${HR.esc(h.at.replace(/-/g, '. '))}</span><span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 whitespace-nowrap">답변 완료</span></span>
+            <span class="block text-sm font-bold text-slate-900 break-keep">${HR.esc(h.question)}</span></span>
+          <span class="material-symbols-outlined text-slate-400 transition-transform ${i === 0 ? 'rotate-180' : ''}">expand_more</span>
+        </button>
+        <div class="${i === 0 ? '' : 'hidden'} px-4 sm:px-5 pb-5"><div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2"><span class="flex items-center gap-2 text-xs font-bold text-slate-800"><img src="${HR.mascot()}" alt="" class="w-6 h-6 object-contain">${HR.botName()} AI 답변</span>
+            ${h.basis.length ? `<span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">근거: ${HR.esc(h.basis[0])}</span>` : ''}</div>
+          <p class="text-[13px] text-slate-700 leading-relaxed whitespace-pre-line break-keep">${HR.esc(h.answer)}${h.answer.length >= 700 ? '…' : ''}</p>
+          <div class="pt-2.5 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+            <span class="flex flex-wrap items-center gap-3">
+              <a href="/chat.html?q=${encodeURIComponent(h.question)}" class="font-bold text-[#0050CC] hover:underline flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">replay</span>다시 물어보기</a>
+              ${h.ehr ? `<span class="text-slate-500 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">open_in_new</span>e-HR: ${HR.esc(h.ehr)}</span>` : ''}</span>
+            <span class="flex items-center gap-3 text-slate-400 font-mono">${HR.esc(h.id)}<button type="button" data-del="${HR.esc(h.id)}" class="font-sans font-semibold text-slate-400 hover:text-[#E60012]">삭제</button></span>
+          </div></div></div>
+      </article>`).join('') : `<div class="py-12 text-center text-sm text-slate-400">${hist.length ? '검색 결과가 없어요.' : `아직 질문 기록이 없어요.<br><a href="/chat.html" class="inline-block mt-2 font-bold text-[#E60012] hover:underline">${HR.botName()}에게 물어보러 가기</a>`}</div>`;
+    $('h-list').querySelectorAll('[data-toggle]').forEach((b) => (b.onclick = () => { b.nextElementSibling.classList.toggle('hidden'); b.querySelector('.material-symbols-outlined').classList.toggle('rotate-180'); }));
+    $('h-list').querySelectorAll('[data-del]').forEach((b) => (b.onclick = async () => {
+      if (!confirm('이 질문 기록을 삭제할까요?')) return;
+      await HR.api(`/api/history/${encodeURIComponent(b.dataset.del)}?${qs}`, { method: 'DELETE' });
+      HR.toast('질문 기록을 삭제했어요.'); loadHistory();
+    }));
+    const more = list.length - hShown;
+    $('h-more').classList.toggle('hidden', more <= 0);
+    $('h-more').querySelector('span:last-child').textContent = `질문 내역 더 보기 (이전 ${more}건)`;
+  }
+  $('h-search').oninput = () => { hShown = 5; renderHistory(); };
+  $('h-more').onclick = () => { hShown += 10; renderHistory(); };
+
+  // ─────────────── 캘린더
+  let calMonth = null, calData = null, selDate = null;
+  const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const EV = {
+    leave: 'bg-red-50 text-[#E60012] border-red-100', company: 'bg-blue-50 text-blue-700 border-blue-100',
+    personal: 'bg-emerald-50 text-emerald-700 border-emerald-100', holiday: 'bg-rose-50 text-rose-600 border-rose-100',
+  };
+  const EV_LABEL = { leave: '연차/휴가', company: '사내일정', personal: '직접추가', holiday: '공휴일' };
+  async function loadCalendar(month) {
+    calMonth = month || calMonth || null;
+    const d = await HR.api(`/api/calendar?${qs}${calMonth ? '&month=' + calMonth : ''}`);
+    calData = d; calMonth = d.month;
+    if (!selDate || !selDate.startsWith(calMonth)) selDate = d.today.startsWith(calMonth) ? d.today : `${calMonth}-01`;
+    const lv = d.leave;
+    $('lv-remain').textContent = `${lv.remaining}일`;
+    $('lv-detail').textContent = `(총 ${lv.total}일 중 ${lv.used}일 사용)`;
+    $('lv-planned').textContent = lv.planned ? `사용 예정 ${lv.planned}일` : '사용 예정 없음';
+    $('lv-deadline').textContent = `사용 기한: ${lv.deadline.replace(/-/g, '.')}까지 · 시연용 예시 데이터`;
+    if (d.nextHoliday) { $('hd-d').textContent = `D-${d.nextHoliday.days}`; $('hd-name').textContent = `${Number(d.nextHoliday.date.slice(5, 7))}월 ${Number(d.nextHoliday.date.slice(8))}일 (${d.nextHoliday.name})`; }
+    renderCal();
+  }
+  function renderCal() {
+    const [y, m] = calMonth.split('-').map(Number);
+    $('cal-title').textContent = `${y}. ${String(m).padStart(2, '0')}`;
+    const first = new Date(y, m - 1, 1);
+    const start = new Date(y, m - 1, 1 - first.getDay());
+    const weeks = Math.ceil((first.getDay() + new Date(y, m, 0).getDate()) / 7);
+    const byDate = {};
+    calData.events.forEach((e) => (byDate[e.date] = byDate[e.date] || []).push(e));
+    let html = '';
+    for (let i = 0; i < weeks * 7; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const key = ymd(d), inM = d.getMonth() === m - 1, evs = byDate[key] || [];
+      const hol = evs.some((e) => e.type === 'holiday');
+      const dow = d.getDay();
+      const numCls = !inM ? 'text-slate-300' : hol || dow === 0 ? 'text-[#E60012]' : dow === 6 ? 'text-blue-600' : 'text-slate-700';
+      const isToday = key === calData.today, isSel = key === selDate;
+      html += `<button type="button" data-d="${key}" class="cal-cell text-left p-1.5 sm:p-2 ${inM ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/80'} relative ${isSel ? 'ring-2 ring-inset ring-[#E60012]' : ''}">
+        <span class="flex items-center justify-between"><span class="text-xs font-bold ${numCls} ${isToday ? 'bg-[#E60012] !text-white rounded-full w-6 h-6 flex items-center justify-center -ml-0.5' : ''}">${d.getDate()}</span>
+          ${evs.length && inM ? `<span class="w-1.5 h-1.5 rounded-full ${evs.some((e) => e.type === 'leave') ? 'bg-[#E60012]' : evs.some((e) => e.type === 'personal') ? 'bg-emerald-500' : evs.some((e) => e.type === 'company') ? 'bg-blue-500' : 'bg-rose-300'}"></span>` : ''}</span>
+        ${inM ? `<span class="mt-1 flex flex-col gap-1">${evs.slice(0, 2).map((e) => `<span class="block truncate px-1.5 py-0.5 rounded border text-[10.5px] font-semibold ${EV[e.type]}">${HR.esc(e.title)}</span>`).join('')}${evs.length > 2 ? `<span class="text-[10px] text-slate-400 font-semibold pl-1">+${evs.length - 2}개</span>` : ''}</span>` : ''}
+      </button>`;
+    }
+    $('cal-grid').innerHTML = html;
+    $('cal-grid').querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => {
+      if (!b.dataset.d.startsWith(calMonth)) return loadCalendar(b.dataset.d.slice(0, 7)).then(() => { selDate = b.dataset.d; renderCal(); });
+      selDate = b.dataset.d; renderCal();
+    }));
+    renderDay();
+  }
+  function renderDay() {
+    const d = new Date(selDate + 'T00:00:00');
+    $('day-title').textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]}) 일정`;
+    const evs = calData.events.filter((e) => e.date === selDate);
+    $('day-list').innerHTML = evs.length ? evs.map((e) => `
+      <div class="p-3 rounded-xl bg-white border border-slate-200">
+        <div class="flex items-center justify-between gap-2"><span class="px-1.5 py-0.5 rounded border text-[10px] font-bold ${EV[e.type]}">${EV_LABEL[e.type]}</span>
+          ${e.type === 'personal' ? `<button type="button" data-del="${e.id}" class="text-[11px] font-semibold text-slate-400 hover:text-[#E60012]">삭제</button>` : ''}</div>
+        <div class="mt-1.5 text-sm font-bold text-slate-900 break-keep">${HR.esc(e.title)}</div>
+        ${e.memo ? `<div class="mt-0.5 text-[11px] text-slate-500 break-keep">${HR.esc(e.memo)}</div>` : ''}
+        ${e.link ? `<a href="${e.link}" class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#0050CC] hover:underline">개정 내용 보기<span class="material-symbols-outlined text-[13px]">arrow_forward</span></a>` : ''}
+      </div>`).join('') : '<p class="text-xs text-slate-400 py-4 text-center">등록된 일정이 없어요.</p>';
+    $('day-list').insertAdjacentHTML('beforeend', `<button type="button" id="day-add" class="w-full py-2 rounded-xl border border-dashed border-slate-300 text-xs font-bold text-slate-500 hover:border-emerald-400 hover:text-emerald-700">+ 이 날짜에 일정 추가</button>`);
+    $('day-add').onclick = () => openEvent(selDate);
+    $('day-list').querySelectorAll('[data-del]').forEach((b) => (b.onclick = async () => {
+      await HR.api(`/api/calendar/${b.dataset.del}?${qs}`, { method: 'DELETE' }); HR.toast('일정을 삭제했어요.'); loadCalendar();
+    }));
+  }
+  const shift = (n) => { const [y, m] = calMonth.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); loadCalendar(ymd(d).slice(0, 7)); };
+  $('cal-prev').onclick = () => shift(-1); $('cal-next').onclick = () => shift(1);
+  $('cal-today').onclick = () => { selDate = null; loadCalendar(calData.today.slice(0, 7)); };
+  $('ehr-leave').href = '/chat.html?q=' + encodeURIComponent('연차휴가 신청 방법을 알려줘');
+  function openEvent(date) {
+    $('ev-date').value = date || selDate || calData.today; $('ev-title').value = ''; $('ev-memo').value = '';
+    $('ev-modal').classList.remove('hidden'); setTimeout(() => $('ev-title').focus(), 50);
+  }
+  $('ev-add').onclick = () => openEvent();
+  $('ev-form').onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const ev = await HR.api('/api/calendar', { method: 'POST', body: { ...who, date: $('ev-date').value, title: $('ev-title').value, memo: $('ev-memo').value } });
+      closeModal('ev-modal'); selDate = ev.date; HR.toast('일정을 추가했어요.'); loadCalendar(ev.date.slice(0, 7));
+    } catch (err) { HR.toast(err.message); }
+  };
+
+  // ─────────────── 직급별 질문 통계
+  async function loadGradeStats() {
+    const { items, note } = await HR.api('/api/grade-stats');
+    $('gs-note').textContent = `* ${note}. 질문 원문은 쓰지 않고 분야별 건수만 집계해요.`;
+    $('gs-grid').innerHTML = items.map((g) => {
+      const mine = g.grade === myGrade;
+      return `<div class="rounded-2xl border ${mine ? 'border-red-200 bg-red-50/30' : 'border-slate-200'} p-4">
+        <div class="flex items-center justify-between mb-3 pb-2 border-b ${mine ? 'border-red-100' : 'border-slate-100'}">
+          <span class="text-sm font-extrabold text-slate-900">${HR.esc(g.grade)}${mine ? ' <span class="text-[11px] font-semibold text-slate-400">(내 직급)</span>' : ''}</span>
+          <span class="text-[11px] font-bold ${mine ? 'text-[#E60012]' : 'text-slate-600'}">1위 ${HR.esc(g.top[0] ? g.top[0].key : '-')}</span></div>
+        <div class="space-y-2.5">${g.top.map((t, i) => `<div><div class="flex justify-between text-xs mb-1"><span class="text-slate-700">${i + 1}. ${HR.esc(t.key)}</span><span class="font-bold text-slate-900">${t.pct}%</span></div>
+          <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full ${i === 0 && mine ? 'bg-[#E60012]' : i === 0 ? 'bg-slate-700' : 'bg-slate-400'}" style="width:${t.pct}%"></div></div></div>`).join('')}</div>
+      </div>`;
+    }).join('');
+    if (!myGrade) $('gs-note').insertAdjacentHTML('beforeend', ' <a href="#prefs" class="font-semibold text-[#E60012] underline">알림 맞춤 설정</a>에서 직급을 고르면 내 직급이 강조돼요.');
+  }
+
+  // ─────────────── 정합성 분석 기록 (담당자)
+  let cpReports = [], cpNotes = [], cpFilter = 'all';
+  const cpStatus = (r) => { const c = (r.summary && r.summary.판정건수) || {}; return (c.위반 || 0) + (c.미반영 || 0) + (c.보완권고 || 0) > 0 ? 'danger' : (c.정합 || 0) > 0 ? 'ok' : 'hold'; };
+  const CP = {
+    danger: { label: '개정 필요', badge: 'bg-red-100 text-[#E60012] border-red-200', card: 'border-red-200/80', head: 'bg-red-50/30 border-red-100/60' },
+    ok: { label: '정합', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', card: 'border-slate-200', head: 'bg-slate-50/50 border-slate-100' },
+    hold: { label: '판정 보류', badge: 'bg-amber-50 text-amber-700 border-amber-200', card: 'border-slate-200', head: 'bg-slate-50/50 border-slate-100' },
+  };
+  async function loadCompliance() {
+    const [reports, notes] = await Promise.all([HR.api('/api/compliance/reports'), HR.api(`/api/notifications?${qs}`)]);
+    cpReports = reports; cpNotes = notes.items.filter((n) => n.kind === 'compliance');
+    const n = (s) => cpReports.filter((r) => cpStatus(r) === s).length;
+    const card = (label, value, unit, cls) => `<div class="p-4 rounded-xl border ${cls}"><span class="text-[11px] font-semibold">${label}</span><div class="mt-2 flex items-baseline gap-1"><span class="text-2xl font-extrabold font-mono">${value}</span><span class="text-xs font-medium">${unit}</span></div></div>`;
+    $('cp-cards').innerHTML = card('누적 정합성 분석', cpReports.length, '건', 'bg-slate-50 border-slate-200/80 text-slate-700')
+      + card('개정 필요 권고', n('danger'), '건', 'bg-red-50/50 border-red-200/60 text-[#E60012]')
+      + card('정합 (적합)', n('ok'), '건', 'bg-emerald-50/50 border-emerald-200/60 text-emerald-700')
+      + card('알림 발송', cpNotes.length, '회 (담당자)', 'bg-slate-50 border-slate-200/80 text-slate-700');
+    const f = [['all', '전체', cpReports.length], ['danger', '개정 필요', n('danger')], ['ok', '정합', n('ok')], ['hold', '판정 보류', n('hold')]];
+    $('cp-filters').innerHTML = f.map(([k, l, c]) => `<button type="button" data-f="${k}" class="px-3 py-1.5 rounded-lg font-bold whitespace-nowrap border ${cpFilter === k ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-100 text-slate-700 border-slate-200/60 hover:bg-slate-200'}">${l} (${c})</button>`).join('');
+    $('cp-filters').querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { cpFilter = b.dataset.f; loadCompliance(); }));
+    navBadge.compliance = n('danger') ? `<span class="min-w-[22px] text-center px-1.5 py-0.5 rounded-full bg-red-100 text-[#E60012] text-[11px] font-bold">${n('danger')}</span>` : '';
+    renderNav(); renderCompliance();
+  }
+  // 리포트 "1. 요약"의 개정 핵심 항목만 뽑기
+  function keyPoints(md) {
+    const sec = (String(md).split(/\n## /)[0] || '').split('\n');
+    const i = sec.findIndex((l) => /개정 핵심/.test(l));
+    const out = [];
+    for (const l of sec.slice(i + 1)) { if (/^\s{2,}\d+\.\s/.test(l)) out.push(l.trim().replace(/^\d+\.\s*/, '').replace(/\*\*/g, '')); else if (out.length && /^- /.test(l)) break; }
+    return out.slice(0, 3);
+  }
+  function renderCompliance() {
+    const kw = $('cp-search').value.trim().toLowerCase();
+    const list = cpReports.filter((r) => (cpFilter === 'all' || cpStatus(r) === cpFilter) && (!kw || `${r.law.name} ${((r.summary || {}).관련사규 || []).join(' ')} ${r.report}`.toLowerCase().includes(kw)));
+    $('cp-list').innerHTML = list.length ? list.map((r) => {
+      const sm = r.summary || {}, st = CP[cpStatus(r)], c = sm.판정건수 || {};
+      const regs = (sm.관련사규 || []).slice(0, 2).join(', ');
+      const note = cpNotes.find((x) => x.reportId === r.id) || cpNotes.find((x) => x.title === `정합성 분석 완료: ${r.law.name}` && x.createdAt.slice(0, 15) === r.createdAt.slice(0, 15));
+      const pts = keyPoints(r.report);
+      return `<div class="border ${st.card} rounded-2xl overflow-hidden bg-white">
+        <div class="p-4 sm:p-5 border-b ${st.head} flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div class="space-y-1.5 min-w-0">
+            <div class="flex flex-wrap items-center gap-2"><span class="px-2.5 py-0.5 rounded text-[11px] font-bold border ${st.badge}">${st.label}</span>
+              <span class="text-[11px] text-slate-500 font-mono">분석 일시: ${HR.esc(r.createdAt)}</span>
+              <span class="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-semibold">ID ${HR.esc(r.id)}</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded ${r.trigger === '정기 확인' ? 'bg-blue-50 text-blue-700' : r.trigger === '지금 분석하기' ? 'bg-violet-50 text-violet-700' : 'bg-slate-100 text-slate-600'}">${HR.esc(r.trigger || '직접 실행')}</span></div>
+            <div class="text-sm font-bold text-slate-900 break-keep"><span class="text-[#E60012] font-semibold">[개정법령]</span> ${HR.esc(r.law.name)} <span class="text-xs font-medium text-slate-400">(${HR.esc(r.law.promulgated || '-')} 공포 · ${HR.esc(r.law.effective || '-')} 시행)</span>
+              ${regs ? `<span class="text-slate-300 mx-1">vs</span><span class="text-slate-700 font-semibold">[현행사규]</span> ${HR.esc(regs)}` : ''}</div>
+          </div>
+          <span class="shrink-0 self-start md:self-auto text-[11px] font-semibold text-slate-600 whitespace-nowrap">위반 ${c.위반 || 0} · 미반영 ${c.미반영 || 0} · 보완 ${c.보완권고 || 0} · 정합 ${c.정합 || 0}</span>
+        </div>
+        <div class="p-4 sm:p-5 space-y-3.5 text-xs">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5"><div class="flex items-center gap-1.5 text-slate-500 font-semibold text-[11px]"><span class="material-symbols-outlined text-[15px] text-slate-400">description</span>AI 정합성 분석 — 개정 핵심</div>
+              ${pts.length ? `<ul class="list-disc pl-4 space-y-1 text-slate-700 leading-relaxed">${pts.map((p) => `<li class="break-keep">${HR.esc(p)}</li>`).join('')}</ul>` : '<p class="text-slate-500">리포트에서 요약을 확인하세요.</p>'}</div>
+            <div class="p-3.5 rounded-xl bg-rose-50/40 border border-red-100 space-y-1.5"><div class="flex items-center gap-1.5 text-[#E60012] font-semibold text-[11px]"><span class="material-symbols-outlined text-[15px]">notifications_active</span>알림 발송 이력</div>
+              ${note ? `<p class="font-semibold text-slate-900">${HR.esc(note.createdAt)} [담당자 알림]</p><p class="text-slate-600">"${HR.esc(note.title)} — ${HR.esc(note.summary)}"</p>
+                <span class="inline-block text-[10px] font-semibold px-2 py-0.5 rounded border ${note.read ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'}">${note.read ? '수신 확인 완료' : '미확인'}</span>`
+                : '<p class="text-slate-500">이 분석은 알림 기능 도입 전에 실행되어 발송 이력이 없어요.</p>'}</div>
+          </div>
+          <div class="pt-2 flex flex-wrap items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 gap-2">
+            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-slate-400">rule</span>처리 상태: <strong class="text-slate-800">${HR.esc(r.status || '미검토')}</strong></span>
+            <span class="flex items-center gap-2"><a href="/chat.html?q=${encodeURIComponent(r.law.name + ' 개정 사항 중 사규에 반영해야 할 내용은?')}" class="px-3 py-1 rounded-lg text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 font-semibold">챗봇에 묻기</a>
+              <a href="/compliance.html?report=${encodeURIComponent(r.id)}" class="px-3 py-1 rounded-lg text-white bg-slate-900 hover:bg-slate-800 font-semibold">리포트 보기</a></span>
+          </div>
+        </div></div>`;
+    }).join('') : '<p class="py-10 text-center text-sm text-slate-400">해당하는 분석 기록이 없어요.</p>';
+  }
+  $('cp-search').oninput = renderCompliance;
+
+  // ─────────────── 알림 맞춤 설정
+  let prefsLoaded = false;
+  async function loadPrefs() {
+    if (prefsLoaded) return; prefsLoaded = true;
+    const { profile, options } = await HR.api(`/api/profile?${qs}`);
+    const sel = (id, list, v) => ($(id).innerHTML = '<option value="">선택 안 함</option>' + list.map((x) => `<option ${x === v ? 'selected' : ''}>${HR.esc(x)}</option>`).join(''));
+    sel('p-grade', options.grades, profile.grade); sel('p-position', options.positions, profile.position); sel('p-location', options.locations, profile.location);
     const chips = (id, list, on, accent) => {
-      const box = document.getElementById(id);
-      box.innerHTML = list.map((x) => `<button type="button" data-v="${HR.esc(x)}" aria-pressed="${on.includes(x)}" class="chip px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-colors"></button>`).join('');
-      box.querySelectorAll('.chip').forEach((b) => {
+      $(id).innerHTML = list.map((x) => `<button type="button" data-v="${HR.esc(x)}" aria-pressed="${on.includes(x)}" class="chip"></button>`).join('');
+      $(id).querySelectorAll('.chip').forEach((b) => {
         b.textContent = b.dataset.v;
         const paint = () => (b.className = 'chip px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-colors ' + (b.getAttribute('aria-pressed') === 'true' ? accent : 'border-slate-200 bg-white text-slate-600 hover:border-red-200'));
-        paint();
-        b.onclick = () => { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); paint(); };
+        paint(); b.onclick = () => { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); paint(); };
       });
     };
     chips('p-topics', options.topics, profile.topics, 'border-[#E60012] bg-red-50 text-[#E60012]');
     chips('p-situations', options.situations, profile.situations, 'border-amber-500 bg-amber-100 text-amber-800');
     const picked = (id) => [...document.querySelectorAll(`#${id} .chip[aria-pressed="true"]`)].map((b) => b.dataset.v);
-    document.getElementById('p-sit-clear').onclick = () => document.querySelectorAll('#p-situations .chip').forEach((b) => { b.setAttribute('aria-pressed', 'false'); b.click(); b.click(); });
+    $('p-sit-clear').onclick = () => document.querySelectorAll('#p-situations .chip[aria-pressed="true"]').forEach((b) => b.click());
     const recent = HR.recentTopics();
-    document.getElementById('p-recent').textContent = recent.length ? `(지금: ${recent.join(', ')})` : '(아직 없음)';
-    document.getElementById('p-recent-clear').onclick = () => { HR.clearRecentTopics(); document.getElementById('p-recent').textContent = '(아직 없음)'; HR.toast('최근 질문 주제를 지웠어요.'); };
-    if (profile.updatedAt) document.getElementById('p-saved').textContent = `마지막 저장 ${profile.updatedAt}`;
-    document.getElementById('p-save').onclick = async () => {
-      const body = { ...who, grade: document.getElementById('p-grade').value, position: document.getElementById('p-position').value, location: document.getElementById('p-location').value, topics: picked('p-topics'), situations: picked('p-situations') };
+    $('p-recent').textContent = recent.length ? `(지금: ${recent.join(', ')})` : '(아직 없음)';
+    $('p-recent-clear').onclick = () => { HR.clearRecentTopics(); $('p-recent').textContent = '(아직 없음)'; HR.toast('최근 질문 주제를 지웠어요.'); };
+    if (profile.updatedAt) $('p-saved').textContent = `마지막 저장 ${profile.updatedAt}`;
+    $('p-save').onclick = async () => {
+      const body = { ...who, grade: $('p-grade').value, position: $('p-position').value, location: $('p-location').value, topics: picked('p-topics'), situations: picked('p-situations') };
       const r = await HR.api('/api/profile', { method: 'PUT', body });
-      document.getElementById('p-saved').textContent = `마지막 저장 ${r.profile.updatedAt}`;
+      $('p-saved').textContent = `마지막 저장 ${r.profile.updatedAt}`;
+      myGrade = r.profile.grade || '';
+      const g = [r.profile.grade, r.profile.position].filter(Boolean).join(' · ');
+      $('me-grade').textContent = g; $('me-grade').classList.toggle('hidden', !g);
       HR.toast('알림 설정을 저장했어요. 나와 관련된 개정 알림이 다시 계산됩니다.');
       HR.refreshBell && HR.refreshBell();
     };
-    if (location.hash === '#prefs') document.getElementById('pref-card').scrollIntoView({ behavior: 'smooth' });
-  })().catch(() => {});
+  }
+
+  // 시작: 이미 동의했으면 바로 대시보드 (동의 상태는 저장되어 다시 들어와도 유지)
+  if (HR.consent() === 'Y') showDash();
+  else {
+    $('gate').classList.remove('hidden'); $('gate').classList.add('flex'); renderGate();
+    if (fromGate) HR.toast('채팅을 시작하려면 개인정보 수집·이용 동의가 필요해요.');
+  }
 }
 </script>
 </body></html>

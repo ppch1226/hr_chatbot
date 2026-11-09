@@ -8,8 +8,25 @@ window.HR = (() => {
   const role = () => store.get('hrhappy.role');
   const name = () => store.get('hrhappy.name', 'OO');
   const isAdmin = () => role() === 'admin';
-  const botName = () => (isAdmin() ? '인사해삐M' : '인사해삐');
-  const mascot = () => (isAdmin() ? '/img/mascot-m.svg' : '/img/mascot.svg');
+  const botName = () => (isAdmin() ? '인사해삐m' : '인사해삐');
+  const mascot = () => (isAdmin() ? '/img/chars/rabbit-m.webp' : '/img/chars/rabbit.webp');
+
+  // 프로필 캐릭터: 기본 토끼 + 12간지 (토끼 자리는 고양이)
+  const CHARS = [
+    { id: 'rabbit', name: '토끼해삐', zodiac: '묘(卯)' }, { id: 'rat', name: '쥐해삐', zodiac: '자(子)' }, { id: 'ox', name: '소해삐', zodiac: '축(丑)' },
+    { id: 'tiger', name: '호랑이해삐', zodiac: '인(寅)' }, { id: 'cat', name: '고양이해삐', zodiac: '묘(卯)' }, { id: 'dragon', name: '용해삐', zodiac: '진(辰)' },
+    { id: 'snake', name: '뱀해삐', zodiac: '사(巳)' }, { id: 'horse', name: '말해삐', zodiac: '오(午)' }, { id: 'goat', name: '양해삐', zodiac: '미(未)' },
+    { id: 'monkey', name: '원숭이해삐', zodiac: '신(申)' }, { id: 'rooster', name: '닭해삐', zodiac: '유(酉)' }, { id: 'dog', name: '강아지해삐', zodiac: '술(戌)' },
+    { id: 'pig', name: '돼지해삐', zodiac: '해(亥)' },
+  ];
+  const charKey = () => `hrhappy.char.${role()}.${name()}`;
+  const charOf = (id) => CHARS.find((c) => c.id === id) || CHARS[0];
+  const char = () => charOf(store.get(charKey(), 'rabbit'));
+  const charImg = (c = char()) => (c.id === 'rabbit' ? mascot() : `/img/chars/${c.id}.webp`);
+  function setChar(id) {
+    store.set(charKey(), charOf(id).id);
+    document.querySelectorAll('[data-avatar]').forEach((e) => (e.src = charImg()));
+  }
 
   function sessionId() {
     let id = store.get('hrhappy.sid');
@@ -59,7 +76,7 @@ window.HR = (() => {
       { href: '/mypage.html', icon: 'account_circle', label: '마이페이지' },
     ],
     admin: [
-      { href: '/chat.html', icon: 'smart_toy', label: '인사해삐M(AI챗봇)' },
+      { href: '/chat.html', icon: 'smart_toy', label: '인사해삐m(AI챗봇)' },
       { href: '/faq-admin.html', icon: 'help', label: '자주 찾는 질문 관리' },
       { href: '/risk.html', icon: 'notifications_active', label: '리스크 조기 알림' },
       { href: '/compliance.html', icon: 'verified_user', label: '컴플라이언스 관리' },
@@ -74,9 +91,9 @@ window.HR = (() => {
     const items = NAV[isAdmin() ? 'admin' : 'employee'];
     const nav = items.map((i) => {
       const on = i.href === activeHref;
-      return `<a href="${i.href}" class="relative inline-flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap transition-all ${on ? 'font-bold text-slate-900' : 'font-medium text-slate-500 hover:text-slate-900'}">
+      return `<a href="${i.href}" ${on ? 'aria-current="page"' : ''} class="nav-item relative inline-flex items-center gap-1.5 px-3 xl:px-3.5 text-[13.5px] xl:text-sm whitespace-nowrap rounded-lg transition-colors ${on ? 'font-bold text-slate-900' : 'font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50'}">
         <span class="material-symbols-outlined text-[18px] ${on ? 'text-[#E60012]' : 'text-slate-400'}">${i.icon}</span><span>${i.label}</span>
-        ${on ? '<span class="absolute bottom-0 inset-x-2 h-[2.5px] bg-[#E60012] rounded-full"></span>' : ''}</a>`;
+        ${on ? '<span class="nav-bar absolute bottom-0 inset-x-3 h-[3px] bg-[#E60012] rounded-t-full"></span>' : ''}</a>`;
     }).join('');
     const initials = esc(name()).slice(0, 2);
     const who = isAdmin() ? '인사담당자' : '임직원';
@@ -84,13 +101,13 @@ window.HR = (() => {
     document.body.insertAdjacentHTML('afterbegin', `
       <div class="bg-wave"><img src="/img/wave.svg" alt=""><div class="fade-l"></div><div class="fade-b"></div><div class="glow"></div></div>
       <header class="relative z-30 w-full bg-white/90 backdrop-blur-md border-b border-slate-200">
-        <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between py-4 md:py-6 gap-4">
-          <div class="flex items-center gap-6 lg:gap-8 min-w-0">
-            <a href="/chat.html" class="flex items-center gap-4 shrink-0">${logo()}<div class="h-5 w-px bg-slate-200"></div>
+        <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex items-stretch justify-between h-16 md:h-[76px] gap-4">
+          <div class="flex items-stretch min-w-0">
+            <a href="/chat.html" class="flex items-center gap-3 md:gap-4 shrink-0 pr-5 xl:pr-8">${logo()}<div class="h-5 w-px bg-slate-200"></div>
               <span class="text-base md:text-lg font-extrabold tracking-tight text-slate-900">HR Happy AI</span></a>
-            <nav class="hidden lg:flex items-center gap-1.5">${nav}</nav>
+            <nav class="hidden lg:flex items-stretch gap-0.5 xl:gap-1.5 py-0 [&>a]:my-0">${nav}</nav>
           </div>
-          <div class="flex items-center gap-2 shrink-0">
+          <div class="flex items-center gap-2 shrink-0 self-center">
             <div class="relative">
               <button id="bell-btn" type="button" title="알림" aria-label="알림" aria-haspopup="true" aria-expanded="false" class="relative w-9 h-9 rounded-xl text-slate-500 hover:text-[#E60012] hover:bg-red-50 flex items-center justify-center">
                 <span class="material-symbols-outlined text-[22px]">notifications</span>
@@ -99,7 +116,7 @@ window.HR = (() => {
               <div id="bell-panel" class="hidden absolute right-0 mt-2 w-[min(92vw,380px)] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden"></div>
             </div>
             <a href="/mypage.html" title="마이페이지" class="flex items-center gap-2 hover:opacity-80">
-            <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs ring-2 ring-red-500/20">${initials}</div>
+            <img data-avatar src="${charImg()}" alt="${initials} 프로필 캐릭터" class="w-9 h-9 object-contain">
             <div class="hidden md:flex flex-col text-left">
               <span class="text-xs font-bold text-slate-900 leading-tight">${who} (${esc(name())}님)</span>
               <span class="text-[10px] text-slate-400">사내인사포털 로그인됨</span>
@@ -107,7 +124,7 @@ window.HR = (() => {
             <button onclick="HR.logout()" title="로그아웃" class="ml-1 w-8 h-8 rounded-lg text-slate-400 hover:text-[#E60012] hover:bg-red-50 flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">logout</span></button>
           </div>
         </div>
-        <nav class="lg:hidden flex items-center gap-1 overflow-x-auto scrollbar-none px-3 pb-2">${nav}</nav>
+        <nav class="lg:hidden flex items-stretch h-11 gap-1 overflow-x-auto scrollbar-none px-3 border-t border-slate-100">${nav}</nav>
       </header>`);
 
     document.body.insertAdjacentHTML('beforeend', `
@@ -232,5 +249,5 @@ window.HR = (() => {
       </div>`).join('');
   }
 
-  return { role, name, isAdmin, consent, setConsent, requireConsent, botName, mascot, sessionId, login, logout, guard, esc, md, api, toast, layout, statBars, logo, recentTopics, addRecentTopics, clearRecentTopics, refreshBell, KIND };
+  return { CHARS, char, charImg, charOf, setChar, role, name, isAdmin, consent, setConsent, requireConsent, botName, mascot, sessionId, login, logout, guard, esc, md, api, toast, layout, statBars, logo, recentTopics, addRecentTopics, clearRecentTopics, refreshBell, KIND };
 })();

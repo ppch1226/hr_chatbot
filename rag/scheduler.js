@@ -79,14 +79,17 @@ async function checkRegulations({ source = '정기 확인', log = console.log } 
 }
 
 /** 법령 확인: 개정되면 담당자 알림 + 법령 색인 갱신 */
-async function checkLawsNow({ log = console.log } = {}) {
+async function checkLawsNow({ log = console.log, source = '정기 확인' } = {}) {
   const lawsources = require('./lawsources');
   const { created, changed } = await notify.checkLaws({ log });
   if (changed) await lawsources.ingestLaws({ log }).catch((e) => log('  법령 재색인 실패: ' + e.message));
   const s2 = notify.state();
   s2.lastChecks = { ...(s2.lastChecks || {}), laws: notify.nowKST(), lawsResult: `개정 ${created.length}건` };
   notify.saveState(s2);
-  return { created: created.length };
+  // 개정된 법령은 정합성 분석까지 자동 실행 (server.js에서 연결)
+  const changedLaws = created.map((n) => n.law).filter(Boolean);
+  if (module.exports.onLawsChecked) await module.exports.onLawsChecked({ changedLaws, source, log }).catch((e) => log('  자동 정합성 분석 실패: ' + e.message));
+  return { created: created.length, changedLaws };
 }
 
 async function run(what, opts) {
@@ -102,7 +105,7 @@ async function run(what, opts) {
 async function tick(log) {
   const lc = notify.state().lastChecks || {};
   if (!lc.regs || lc.regs < lastDue(CFG.regTime)) await run('regs', { source: '정기 확인', log }).catch((e) => log('  사규 확인 실패: ' + e.message));
-  if (!lc.laws || lc.laws < lastDue(CFG.lawTime, CFG.lawDay)) await run('laws', { log }).catch((e) => log('  법령 확인 실패: ' + e.message));
+  if (!lc.laws || lc.laws < lastDue(CFG.lawTime, CFG.lawDay)) await run('laws', { source: '정기 확인', log }).catch((e) => log('  법령 확인 실패: ' + e.message));
 }
 
 function start(log = console.log) {

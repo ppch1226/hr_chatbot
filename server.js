@@ -38,6 +38,7 @@ const sensitive = require('./rag/sensitive');
 const lawsources = require('./rag/lawsources');
 const notify = require('./rag/notify');
 const scheduler = require('./rag/scheduler');
+const userdata = require('./rag/userdata');
 
 // ── JSON 저장소
 const DATA_DIR = path.join(ROOT, 'data');
@@ -89,6 +90,9 @@ function recordQuestion(role, text) {
   return classify(text, SENSITIVE);
 }
 
+// 시연 환경의 사용자 식별: 역할 + 이름 (실서비스에서는 사내 SSO 사번으로 대체)
+const userKey = (q) => `${q.role === 'admin' ? 'admin' : 'employee'}:${String(q.user || 'OO').slice(0, 40)}`;
+
 // ════════════════════════════════════════════════════════════════
 // API: 상태 / RAG 챗봇
 // ════════════════════════════════════════════════════════════════
@@ -113,7 +117,7 @@ app.get('/api/status', async (req, res) => {
 
 // 스트리밍 답변 (Server-Sent Events): 검색 단계 → 답변 토큰 → 최종 결과(출처·시각화·후속 질문)
 app.post('/api/chat/stream', async (req, res) => {
-  const { role = 'employee', message = '', sessionId = 'default', anonymous = false } = req.body || {};
+  const { role = 'employee', message = '', sessionId = 'default', anonymous = false, user = '' } = req.body || {};
   const who = role === 'admin' ? 'admin' : 'employee';
   const text = String(message).trim();
   if (!text) return res.status(400).json({ error: '질문을 입력하세요.' });
@@ -126,6 +130,8 @@ app.post('/api/chat/stream', async (req, res) => {
   send({ type: 'stage', stage: 'searching' });
   try {
     const r = await rag.answer({ question: text, role: who, sessionId: `${who}:${sessionId}`, anonymous: !!anonymous, onEvent: (e) => !closed && send(e) });
+    // 나의 질문기록: 익명 질문이 아니고 사용자를 알 때만 본인용으로 저장
+    if (!anonymous && user) userdata.addHistory(userKey({ role: who, user }), { question: text, answer: r.answer, sources: r.sources, ehr: r.ehr });
     if (!closed) send({ type: 'done', ...r, sensitive: sensitiveTopics });
   } catch (e) {
     console.error('[chat/stream]', e.message);
@@ -135,7 +141,7 @@ app.post('/api/chat/stream', async (req, res) => {
 });
 
 app.post('/api/chat', async (req, res) => {
-  const { role = 'employee', message = '', sessionId = 'default', reset = false, anonymous = false } = req.body || {};
+  const { role = 'employee', message = '', sessionId = 'default', reset = false, anonymous = false, user = '' } = req.body || {};
   const who = role === 'admin' ? 'admin' : 'employee';
   const key = `${who}:${sessionId}`;
   if (reset) {
@@ -150,6 +156,7 @@ app.post('/api/chat', async (req, res) => {
   const sensitive = recordQuestion(who, text);
   try {
     const r = await rag.answer({ question: text, role: who, sessionId: key, anonymous: !!anonymous });
+    if (!anonymous && user) userdata.addHistory(userKey({ role: who, user }), { question: text, answer: r.answer, sources: r.sources, ehr: r.ehr });
     res.json({ ...r, sensitive });
   } catch (e) {
     console.error('[chat]', e.message); // 질문 원문은 로그에 남기지 않음
@@ -209,8 +216,6 @@ app.get('/api/feedback', (req, res) => {
 // ════════════════════════════════════════════════════════════════
 // API: 사내 알림 · 프로필 · 사규 업로드
 // ════════════════════════════════════════════════════════════════
-// 시연 환경의 사용자 식별: 역할 + 이름 (실서비스에서는 사내 SSO 사번으로 대체)
-const userKey = (q) => `${q.role === 'admin' ? 'admin' : 'employee'}:${String(q.user || 'OO').slice(0, 40)}`;
 
 app.get('/api/notifications', (req, res) => {
   const role = req.query.role === 'admin' ? 'admin' : 'employee';
@@ -239,6 +244,42 @@ app.post('/api/notifications/read', (req, res) => {
 
 app.get('/api/profile', (req, res) => res.json({ profile: notify.getProfile(userKey(req.query)), options: notify.OPTIONS }));
 app.put('/api/profile', (req, res) => res.json({ profile: notify.saveProfile(userKey(req.body || {}), req.body || {}) }));
+
+// ── 마이페이지: 나의 질문기록 · 직급별 통계 · 캘린더 · 맞춤 추천 질문 · 날씨
+const readProfiles = () => { try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'profiles.json'), 'utf8')); } catch { return {}; } };
+app.get('/api/history', (req, res) => res.json({ items: userdata.getHistory(userKey(req.query)), categories: userdata.CATEGORIES }));
+app.delete('/api/history/:id', (req, res) => { userdata.deleteHistory(userKey(req.query), req.params.id); res.json({ ok: true }); });
+app.get('/api/grade-stats', (req, res) => res.json({ items: userdata.gradeStats(readProfiles()), note: '시연용 기본 집계에 실제 질문기록(직급 설정 사용자)을 더한 비율' }));
+app.get('/api/calendar', (req, res) => {
+  const month = /^d{4}-d{2}$/.test(req.query.month || '') ? req.query.month : todayKST().slice(0, 7);
+  const regs = notify.listFor(userKey(req.query), req.query.role === 'admin' ? 'admin' : 'employee').filter((n) => n.kind === 'reg-change');
+  res.json(userdata.calendar(userKey(req.query), month, regs));
+});
+app.post('/api/calendar', (req, res) => {
+  try { res.json(userdata.addEvent(userKey(req.body || {}), req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.delete('/api/calendar/:id', (req, res) => { userdata.deleteEvent(userKey(req.query), req.params.id); res.json({ ok: true }); });
+app.get('/api/suggest', (req, res) => {
+  const role = req.query.role === 'admin' ? 'admin' : 'employee';
+  const recent = String(req.query.recent || '').split(',').filter(Boolean).slice(0, 10);
+  const user = userKey(req.query);
+  const s = load('stats.json');
+  res.json({
+    items: userdata.suggest({
+      admin: role === 'admin',
+      profile: notify.getProfile(user),
+      recent,
+      related: notify.listFor(user, role, { recentTopics: recent }).filter((n) => n.related),
+      stats: { topics: ranked(s.topics) },
+      faq: load('faq.json'),
+      risks: role === 'admin' ? load('risks.json') : [],
+      reports: role === 'admin' ? load('reports.json') : [],
+    }),
+  });
+});
+app.get('/api/weather', async (req, res) => {
+  try { res.json(await userdata.weather()); } catch (e) { res.status(502).json({ error: e.message }); }
+});
 
 app.get('/api/notify/status', (req, res) => res.json(scheduler.status()));
 app.post('/api/notify/check', async (req, res) => {
@@ -337,6 +378,82 @@ app.get('/api/law/search', async (req, res) => {
 // ════════════════════════════════════════════════════════════════
 // API: 정합성 분석
 // ════════════════════════════════════════════════════════════════
+/** 법령 1건 정합성 분석 → 리포트 저장 → 담당자 알림 */
+async function saveAnalysis(law, { requestId, trigger }) {
+  requestId = requestId || `${todayKST().replace(/-/g, '')}-${crypto.randomBytes(2).toString('hex')}`;
+  const parsed = await compliance.analyze(law, { requestId, today: todayKST() });
+  const reports = load('reports.json');
+  const item = {
+    id: requestId,
+    createdAt: nowKST(),
+    trigger,
+    law: { name: law.name, promulgated: law.promulgated, effective: law.effective, revision: law.revision },
+    summary: parsed.summary,
+    report: parsed.report,
+    sources: parsed.sources,
+    status: '미검토',
+  };
+  reports.unshift(item);
+  save('reports.json', reports);
+  const c = (item.summary && item.summary.판정건수) || {};
+  const n = notify.addNotification({ kind: 'compliance', audience: 'admin', title: `정합성 분석 완료: ${law.name}`, summary: `위반 ${c.위반 || 0} · 미반영 ${c.미반영 || 0} · 보완권고 ${c.보완권고 || 0} · 정합 ${c.정합 || 0}`, link: '/compliance.html', effective: law.effective || '', reportId: item.id, trigger });
+  item.notificationId = n && n.id;
+  return item;
+}
+
+// ── 자동 정합성 분석: 매주 정기 법령 확인 때 개정된 법령을 자동 분석, '지금 분석하기'로 즉시 실행
+const RUNS_FILE = path.join(DATA_DIR, 'compliance-runs.json');
+const loadRuns = () => { try { return JSON.parse(fs.readFileSync(RUNS_FILE, 'utf8')); } catch { return []; } };
+let autoProgress = null; // { source, startedAt, step }
+scheduler.onLawsChecked = async ({ changedLaws, source, log }) => {
+  const run = { id: crypto.randomBytes(4).toString('hex'), source, startedAt: (autoProgress && autoProgress.startedAt) || nowKST(), checked: lawsources.LAWS.length, changed: changedLaws, analyzed: [], errors: [] };
+  // 대상: 이번에 개정이 감지된 법령 + (지금 분석하기) 아직 현행 버전으로 분석한 적 없는 최근 개정 법령 최대 2건
+  const targets = [...changedLaws];
+  if (source === '지금 분석하기') {
+    const versions = notify.state().laws || {};
+    const done = new Set(load('reports.json').map((r) => `${r.law.name}|${r.law.promulgated}`));
+    const pending = Object.entries(versions)
+      .filter(([name, v]) => !targets.includes(name) && !done.has(`${name}|${v.promulgated}`))
+      .sort((a, b) => String(b[1].promulgated).localeCompare(String(a[1].promulgated)))
+      .slice(0, Math.max(0, 2 - targets.length));
+    targets.push(...pending.map(([name]) => name));
+    run.pending = pending.map(([name, v]) => ({ name, promulgated: v.promulgated }));
+  }
+  if (!llm.configured() || !LAW_OC) run.errors.push('LLM 또는 법령 API 키가 설정되지 않아 분석을 건너뜀');
+  else {
+    for (const [i, name] of targets.entries()) {
+      if (autoProgress) autoProgress.step = `정합성 분석 중 (${i + 1}/${targets.length}): ${name}`;
+      try {
+        const found = (await lawSearch(name)).find((x) => x.name === name);
+        if (!found) throw new Error('법령을 찾지 못함');
+        const item = await saveAnalysis(await lawDetail(found.mst), { trigger: source });
+        run.analyzed.push({ law: name, reportId: item.id, counts: (item.summary && item.summary.판정건수) || {} });
+      } catch (e) {
+        run.errors.push(`${name}: ${e.message}`);
+        log && log(`  자동 정합성 분석 실패(${name}): ${e.message}`);
+      }
+    }
+  }
+  run.finishedAt = nowKST();
+  const runs = loadRuns();
+  runs.unshift(run);
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(RUNS_FILE, JSON.stringify(runs.slice(0, 100), null, 2));
+};
+app.get('/api/compliance/auto', (req, res) => {
+  const st = scheduler.status();
+  res.json({ schedule: st.schedule.laws, enabled: st.schedule.enabled, next: st.next.laws, lastCheck: st.last.laws || null, running: autoProgress, runs: loadRuns().slice(0, 20), laws: lawsources.LAWS.length });
+});
+app.post('/api/compliance/auto/run', (req, res) => {
+  if (autoProgress || scheduler.status().running) return res.status(409).json({ error: '이미 분석이 진행 중이에요. 잠시 후 다시 확인하세요.', running: autoProgress });
+  autoProgress = { source: '지금 분석하기', startedAt: nowKST(), step: `법령 ${lawsources.LAWS.length}개 개정 여부 확인 중` };
+  scheduler
+    .run('laws', { source: '지금 분석하기', log: (m) => console.log(m) })
+    .catch((e) => console.error('  지금 분석하기 실패:', e.message))
+    .finally(() => (autoProgress = null));
+  res.status(202).json({ started: true, running: autoProgress });
+});
+
 app.post('/api/compliance/run', async (req, res) => {
   const { mst, name } = req.body || {};
   const requestId = `${todayKST().replace(/-/g, '')}-${crypto.randomBytes(2).toString('hex')}`;
@@ -350,23 +467,7 @@ app.post('/api/compliance/run', async (req, res) => {
       law = await lawDetail(found.mst);
     } else law = { name: name || '(법령명 미입력)', promulgated: '', effective: '', revision: '', reason: '', amendment: '', addenda: '' };
 
-    const parsed = await compliance.analyze(law, { requestId, today: todayKST() });
-
-    const reports = load('reports.json');
-    const item = {
-      id: requestId,
-      createdAt: nowKST(),
-      law: { name: law.name, promulgated: law.promulgated, effective: law.effective, revision: law.revision },
-      summary: parsed.summary,
-      report: parsed.report,
-      sources: parsed.sources,
-      status: '미검토',
-    };
-    reports.unshift(item);
-    save('reports.json', reports);
-    const c = (item.summary && item.summary.판정건수) || {};
-    notify.addNotification({ kind: 'compliance', audience: 'admin', title: `정합성 분석 완료: ${law.name}`, summary: `위반 ${c.위반 || 0} · 미반영 ${c.미반영 || 0} · 보완권고 ${c.보완권고 || 0} · 정합 ${c.정합 || 0}`, link: '/compliance.html', effective: law.effective || '' });
-    res.json(item);
+    res.json(await saveAnalysis(law, { requestId, trigger: '직접 실행' }));
   } catch (e) {
     res.status(502).json({ error: e.message });
   }

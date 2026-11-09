@@ -42,6 +42,24 @@
     </div>
   </div>
 
+  <!-- 자동 정합성 분석: 매주 정기 실행 + 지금 분석하기 -->
+  <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 lg:p-7 space-y-5">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div><h2 class="font-bold text-slate-900 flex items-center gap-2.5 text-xl"><span class="material-symbols-outlined text-[#E60012]">event_repeat</span>자동 정합성 분석</h2>
+        <p class="text-xs text-slate-500 mt-1 break-keep"><strong id="auto-sched" class="text-slate-700">매주 월요일 07:00</strong>에 노동 법령 <span id="auto-laws">16</span>개의 개정 여부를 확인하고, 개정된 법령은 사규와의 정합성 분석까지 자동으로 실행해요. <strong class="text-slate-700">지금 분석하기</strong>를 누르면 같은 확인을 즉시 실행하고, 아직 현행 버전으로 분석하지 않은 최근 개정 법령도 최대 2건 함께 분석해요.</p></div>
+      <button id="auto-run" type="button" class="shrink-0 h-12 px-5 rounded-xl bg-[#E60012] hover:bg-[#B7000C] text-white font-bold text-sm inline-flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"><span class="material-symbols-outlined text-[20px]">bolt</span><span>지금 분석하기</span></button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200"><div class="text-xs text-slate-500 font-semibold">마지막 분석</div><div id="auto-last" class="mt-1 text-base font-extrabold text-slate-900">-</div><div id="auto-last-sub" class="text-[11px] text-slate-500 mt-0.5"></div></div>
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200"><div class="text-xs text-slate-500 font-semibold">다음 정기 분석</div><div id="auto-next" class="mt-1 text-base font-extrabold text-slate-900">-</div><div class="text-[11px] text-slate-500 mt-0.5">서버가 꺼져 있던 동안 지난 분석은 켜질 때 실행</div></div>
+      <div id="auto-state-box" class="p-4 rounded-xl bg-slate-50 border border-slate-200"><div class="text-xs text-slate-500 font-semibold">진행 상태</div><div id="auto-state" class="mt-1 text-base font-extrabold text-slate-900">대기 중</div><div id="auto-state-sub" class="text-[11px] text-slate-500 mt-0.5"></div></div>
+    </div>
+    <div>
+      <div class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-slate-400">history</span>분석 실행 기록</div>
+      <div id="auto-runs" class="divide-y divide-slate-100 rounded-xl border border-slate-200 overflow-hidden"></div>
+    </div>
+  </div>
+
   <!-- 분석 실행 -->
   <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 lg:p-7 space-y-4">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -162,7 +180,7 @@ if (HR.guard(true)) {
       const on = r.id === open, c = counts(r), fix = needFix(r);
       const regs = (r.summary && r.summary.관련사규 || []).join(', ');
       return `<tr class="hover:bg-slate-50/70 cursor-pointer group ${on ? 'bg-slate-50/40' : ''}" data-open="${r.id}">
-        <td class="py-4 px-4 text-center font-semibold text-slate-500 text-xs">${HR.esc(r.id)}</td>
+        <td class="py-4 px-4 text-center font-semibold text-slate-500 text-xs">${HR.esc(r.id)}${r.trigger && r.trigger !== '직접 실행' ? `<div class="mt-1"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${r.trigger === '정기 확인' ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700'}">${HR.esc(r.trigger)}</span></div>` : ''}</td>
         <td class="py-4 px-4"><span class="inline-flex px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 max-w-[10rem] truncate" title="${HR.esc(r.law.name)}">${HR.esc(r.law.name)}</span></td>
         <td class="py-4 px-4"><div class="flex items-center justify-between gap-2"><span class="text-base font-semibold text-slate-900 group-hover:text-[#E60012] leading-snug">${regs ? '[' + HR.esc(regs) + '] ' : ''}위반 ${c.위반 || 0} · 미반영 ${c.미반영 || 0} · 보완 ${c.보완권고 || 0} · 정합 ${c.정합 || 0}
           ${r.sample ? '<span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 align-middle">샘플</span>' : ''}${r.demo ? '<span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 align-middle">데모</span>' : ''}</span>
@@ -208,7 +226,51 @@ if (HR.guard(true)) {
     }));
   }
   document.getElementById('kw').oninput = render;
-  HR.api('/api/compliance/reports').then((d) => { reports = d; open = d[0] && d[0].id; renderAll(); });
+  const reportParam = new URLSearchParams(location.search).get('report');
+  function loadReports(focus) {
+    return HR.api('/api/compliance/reports').then((d) => {
+      reports = d; open = focus || (d[0] && d[0].id); renderAll();
+      if (focus) setTimeout(() => document.querySelector(`[data-open="${CSS.escape(focus)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    });
+  }
+  loadReports(reportParam);
+
+  // ── 자동 정합성 분석
+  let autoTimer = null, wasRunning = false;
+  const fmt = (t) => (t ? t.replace(/^(d{4})-(d{2})-(d{2})/, '$1.$2.$3') : '-');
+  async function loadAuto() {
+    const a = await HR.api('/api/compliance/auto');
+    document.getElementById('auto-sched').textContent = a.schedule;
+    document.getElementById('auto-laws').textContent = a.laws;
+    const last = a.runs[0];
+    document.getElementById('auto-last').textContent = last ? fmt(last.finishedAt || last.startedAt) : a.lastCheck ? fmt(a.lastCheck) : '아직 없음';
+    document.getElementById('auto-last-sub').textContent = last ? `${last.source} · 개정 ${last.changed.length}건 · 분석 ${last.analyzed.length}건` : a.lastCheck ? '개정 여부 확인만 실행됨 (자동 분석 기록 이전)' : '';
+    document.getElementById('auto-next').textContent = a.enabled ? fmt(a.next) : '정기 분석 꺼짐';
+    const btn = document.getElementById('auto-run'), box = document.getElementById('auto-state-box');
+    const on = !!a.running;
+    btn.disabled = on; btn.querySelector('span:last-child').textContent = on ? '분석 중…' : '지금 분석하기';
+    box.className = 'p-4 rounded-xl border ' + (on ? 'bg-red-50/60 border-red-200' : 'bg-slate-50 border-slate-200');
+    document.getElementById('auto-state').innerHTML = on ? '<span class="dot"></span><span class="dot"></span><span class="dot"></span> <span class="ml-1">실행 중</span>' : '대기 중';
+    document.getElementById('auto-state-sub').textContent = on ? `${a.running.step} (${a.running.startedAt} 시작)` : '';
+    document.getElementById('auto-runs').innerHTML = a.runs.length ? a.runs.slice(0, 6).map((r) => `
+      <div class="px-4 py-3 flex flex-col md:flex-row md:items-center gap-1.5 md:gap-4 text-xs">
+        <span class="font-mono text-slate-500 shrink-0 w-36">${HR.esc(fmt(r.finishedAt || r.startedAt))}</span>
+        <span class="shrink-0 px-2 py-0.5 rounded font-bold ${r.source === '정기 확인' ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700'}">${HR.esc(r.source)}</span>
+        <span class="text-slate-700 min-w-0">법령 ${r.checked}개 확인 · 개정 감지 ${r.changed.length}건${r.changed.length ? ' (' + r.changed.map(HR.esc).join(', ') + ')' : ''} ·
+          ${r.analyzed.length ? '분석 ' + r.analyzed.map((x) => `<a href="?report=${encodeURIComponent(x.reportId)}" class="font-bold text-[#0050CC] hover:underline">${HR.esc(x.law)}</a>`).join(', ') : '<span class="text-slate-500">새로 분석할 개정 법령 없음</span>'}
+          ${r.errors.length ? `<span class="text-amber-700"> · 오류 ${r.errors.length}건</span>` : ''}</span>
+      </div>`).join('') : '<p class="px-4 py-6 text-center text-xs text-slate-400">아직 자동 분석 기록이 없어요. 지금 분석하기를 누르거나 다음 정기 분석을 기다리세요.</p>';
+    if (wasRunning && !on) { HR.toast(last && last.analyzed.length ? `분석 완료: ${last.analyzed.map((x) => x.law).join(', ')}` : '분석 완료: 새로 분석할 개정 법령이 없어요.'); loadReports(last && last.analyzed[0] && last.analyzed[0].reportId); }
+    wasRunning = on;
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(loadAuto, on ? 3000 : 60000);
+  }
+  document.getElementById('auto-run').onclick = async () => {
+    try { await HR.api('/api/compliance/auto/run', { method: 'POST' }); HR.toast('지금 분석을 시작했어요. 진행 상태가 이 화면에 표시돼요.'); }
+    catch (e) { HR.toast(e.message); }
+    loadAuto();
+  };
+  loadAuto().catch(() => {});
 }
 </script>
 </body></html>
