@@ -14,9 +14,10 @@
 <body class="min-h-screen flex flex-col relative">
 <main class="relative z-20 flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
   <!-- 왼쪽 안내 패널은 기존 너비의 60%만 쓰고(약 15%) 나머지는 메인 챗봇에 배분 -->
-  <div class="grid grid-cols-1 lg:grid-cols-[minmax(200px,20%)_minmax(0,1fr)] xl:grid-cols-[minmax(210px,15%)_minmax(0,1fr)] gap-6 lg:gap-7 items-start">
-    <aside class="lg:sticky lg:top-6 flex flex-col gap-4 min-w-0">
-      <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+  <div class="grid grid-cols-1 lg:grid-cols-[minmax(200px,20%)_minmax(0,1fr)] xl:grid-cols-[minmax(210px,15%)_minmax(0,1fr)] gap-6 lg:gap-7 items-stretch">
+    <!-- 왼쪽 카드 두 개의 전체 높이 = 오른쪽 메인 챗봇 높이 (위 카드가 남는 높이를 채움) -->
+    <aside class="flex flex-col gap-4 min-w-0">
+      <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 lg:flex-1">
         <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-[#e60012] border border-red-100 mb-3.5 whitespace-nowrap">
           <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>스마트 HR 어시스턴트</span>
         <h2 class="text-xl font-bold text-slate-900 leading-snug mb-2.5 break-keep">안녕하세요, <span class="text-[#e60012] whitespace-nowrap" data-name></span>!<br><span class="whitespace-nowrap"><span data-bot></span>입니다.</span></h2>
