@@ -1,0 +1,563 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/vendor/pretendard/pretendard.css">
+<link rel="stylesheet" href="/vendor/symbols/outlined.css">
+<link rel="stylesheet" href="/css/app.css">
+<script src="/vendor/tailwind/index.global.js"></script>
+<script src="/vendor/marked/marked.min.js"></script>
+<script src="/vendor/dompurify/purify.min.js"></script>
+<script src="/js/common.js"></script>
+
+<title>KT IS 인사해삐 - HR Happy AI</title>
+</head>
+<body class="min-h-screen flex flex-col relative">
+<main class="relative z-20 flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+    <aside class="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-6 flex flex-col gap-4">
+      <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-100">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-[#e60012] border border-red-100 mb-4">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>스마트 HR 어시스턴트</span>
+        <h2 class="text-2xl font-bold text-slate-900 leading-tight mb-3">안녕하세요, <span class="text-[#e60012]" data-name></span>!<br><span data-bot></span>입니다.</h2>
+        <p class="text-sm text-slate-600 leading-relaxed" id="intro"></p>
+      </div>
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 text-xs text-slate-500 space-y-2">
+        <div class="font-bold text-slate-700 flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-[#E60012]">info</span>이용 안내</div>
+        <p>답변은 사규·법령 근거와 함께 제공되며, 최종 판단은 인사담당자 확인이 필요합니다.</p>
+        <p>질문 원문과 개인정보는 통계에 저장되지 않고, 주제별 건수만 비식별로 집계됩니다.</p>
+      </div>
+    </aside>
+
+    <section class="lg:col-span-8 xl:col-span-9 flex flex-col">
+      <div class="bg-white rounded-3xl shadow-xl border border-slate-200/90 flex flex-col relative overflow-hidden ring-1 ring-black/5 h-[calc(100vh-12rem)] min-h-[620px]">
+        <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-slate-200/90 flex items-center justify-between bg-white/95">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-50/50 border-2 border-red-200 p-0.5 overflow-hidden shrink-0 ring-2 ring-red-100"><img data-mascot class="w-full h-full object-cover rounded-full" alt=""></div>
+            <div>
+              <div class="flex items-center gap-2"><h3 class="text-base sm:text-lg font-extrabold text-slate-900" data-bot></h3>
+                <span class="px-2 py-0.5 rounded-full bg-red-50 text-[#E60012] text-[11px] font-bold border border-red-200">2026 최신판</span></div>
+              <p class="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5"><span id="live-dot" class="w-2 h-2 rounded-full bg-slate-300"></span><span id="live-text">연결 확인 중…</span></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="btn-tts" title="마지막 답변 읽어주기" class="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-[#E60012] text-slate-500 flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">volume_up</span></button>
+            <button id="btn-reset" title="새 대화 시작" class="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-[#E60012] text-slate-500 flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">refresh</span></button>
+          </div>
+        </div>
+
+        <div id="stream" class="flex-1 p-5 sm:p-8 overflow-y-auto bg-gradient-to-b from-slate-50/30 to-white"></div>
+
+        <div class="p-4 sm:p-6 border-t border-slate-100 bg-white space-y-3.5">
+          <div id="chips" class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none"></div>
+          <!-- 민감한 질문 입력 시 자동 표시 -->
+          <div id="anon-box" class="hidden anon-pop"><label class="flex items-start gap-3 p-3 rounded-xl border-2 border-red-200 bg-red-50/60 cursor-pointer select-none">
+            <input id="anon" type="checkbox" class="mt-0.5 w-4 h-4 accent-[#E60012] shrink-0">
+            <span class="min-w-0">
+              <span class="flex items-center gap-1.5 text-sm font-bold text-[#E60012]"><span class="material-symbols-outlined text-[18px]">shield_person</span>익명으로 질문하기</span>
+              <span class="block text-[11px] text-slate-600 mt-0.5 leading-relaxed">민감한 내용일 수 있어요. 체크하면 이름 없이 답변하고, 이전 대화와 연결하지 않으며, 대화 이력을 서버에 남기지 않아요. 답변 평가도 점수만 저장돼요.</span>
+            </span>
+          </label></div>
+          <form id="ask" class="relative bg-white border-2 border-slate-200 rounded-2xl p-2 sm:p-2.5 flex items-center gap-2 focus-within:border-[#E60012] focus-within:ring-4 focus-within:ring-red-500/10 transition-all">
+            <button type="button" id="btn-mic" title="음성 질문" class="w-10 h-10 rounded-xl text-slate-400 hover:text-[#E60012] hover:bg-red-50 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">mic</span></button>
+            <input id="q" autocomplete="off" class="flex-1 min-w-0 bg-transparent border-0 text-sm md:text-base text-slate-800 placeholder-slate-400 px-2 outline-none" placeholder="궁금한 사항을 물어보세요. (예: 청원 휴가 일수)">
+            <button id="send" class="h-11 px-5 rounded-xl bg-[#111827] hover:bg-[#E60012] text-white flex items-center gap-1.5 transition-all font-semibold text-sm shrink-0 disabled:opacity-50"><span>질문</span><span class="material-symbols-outlined text-[18px]">send</span></button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+if (HR.guard() && HR.requireConsent()) {
+  HR.layout('/chat.html');
+  const admin = HR.isAdmin();
+  document.querySelectorAll('[data-name]').forEach((e) => (e.textContent = HR.name() + '님'));
+  document.querySelectorAll('[data-bot]').forEach((e) => (e.textContent = HR.botName()));
+  document.querySelectorAll('[data-mascot]').forEach((e) => (e.src = HR.mascot()));
+  document.getElementById('intro').textContent = admin
+    ? '인사담당자를 위한 노무 검토 비서 인사해삐M입니다. 사규·법령·판례를 근거로 노무 사례 검토 초안과 처리 절차를 안내해 드려요.'
+    : 'KT IS 임직원을 위한 인사해주는 비서 인사해삐입니다. 궁금한 사내 규정과 휴가·휴직 절차, 복지 혜택을 대화하듯 편하게 물어보세요.';
+
+  const CHIPS = admin
+    ? [['🗂️', '무단결근 직원 처리 절차'], ['⚖️', '징계위원회 소명 기회 부여 기준'], ['🍼', '육아휴직 관련 최근 법령 개정 사항'], ['📅', '연차 사용촉진 절차 검토']]
+    : [['🍼', '출산·육아휴직 규정'], ['🎁', '복지포인트 차감 기준'], ['⏱️', '연장근무 사전승인'], ['📖', '취업규칙 바로가기']];
+  const chipBox = document.getElementById('chips');
+  const CHIP_CLS = 'px-3.5 py-1.5 rounded-full bg-white hover:bg-red-50 hover:text-[#E60012] hover:border-red-200 border border-slate-200 text-xs font-medium text-slate-700 transition-colors shrink-0';
+  const chipLabel = (icon, text) => `<div class="text-[11px] font-semibold text-slate-400 shrink-0 flex items-center gap-1 pr-1"><span class="material-symbols-outlined text-[14px] text-[#E60012]">${icon}</span>${text}</div>`;
+  // 추천 키워드 (기본)
+  function showDefaultChips() {
+    chipBox.innerHTML = chipLabel('tips_and_updates', '추천 키워드');
+    CHIPS.forEach(([e, t]) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = CHIP_CLS; b.textContent = `${e} ${t}`;
+      b.onclick = () => send(t === '취업규칙 바로가기' ? '취업규칙의 주요 내용을 요약해줘' : t + ' 알려줘');
+      chipBox.appendChild(b);
+    });
+  }
+  // 답변 뒤 후속 질문 (추천 키워드 자리에 표시)
+  function showFollowups(list) {
+    if (!list || !list.length) return showDefaultChips();
+    chipBox.innerHTML = chipLabel('subdirectory_arrow_right', '이어서 물어보기');
+    list.forEach((q) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = CHIP_CLS.replace('bg-white', 'bg-red-50/40').replace('border-slate-200', 'border-red-200') + ' followup';
+      b.textContent = q;
+      b.onclick = () => send(q);
+      chipBox.appendChild(b);
+    });
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.title = '추천 키워드 보기';
+    back.className = 'w-7 h-7 rounded-full text-slate-400 hover:text-[#E60012] hover:bg-red-50 flex items-center justify-center shrink-0';
+    back.innerHTML = '<span class="material-symbols-outlined text-[16px]">apps</span>';
+    back.onclick = showDefaultChips;
+    chipBox.appendChild(back);
+  }
+  showDefaultChips();
+
+  HR.api('/api/status').then((s) => {
+    const on = s.rag.index && s.rag.llm;
+    document.getElementById('live-dot').className = 'w-2 h-2 rounded-full ' + (on ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400');
+    document.getElementById('live-text').textContent = on
+      ? `실시간 상담 온에어 · 사규 ${s.rag.docs.length}건${s.law && s.law.configured ? ' + 국가법령정보센터 ' + (admin ? s.law.admin : s.law.employee).join('·') : ''} 근거 검색`
+      : !s.rag.index ? '규정 색인 없음 · 서버에서 npm run ingest 실행 필요' : 'LLM 미설정 · .env의 OPENROUTER_API_KEY 확인 필요';
+  }).catch(() => {});
+
+  const stream = document.getElementById('stream');
+  const qInput = document.getElementById('q');
+  const sendBtn = document.getElementById('send');
+  let lastAnswer = '';
+  const time = () => new Date().toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
+
+  function welcome() {
+    stream.innerHTML = `
+      <div class="h-full flex flex-col items-center justify-center py-6 px-4 text-center max-w-xl mx-auto">
+        <img src="${HR.mascot()}" alt="${HR.botName()} 마스코트" class="w-56 h-56 sm:w-64 sm:h-64 mb-4 drop-shadow-sm select-none pointer-events-none">
+        <h2 class="text-[22px] sm:text-2xl font-extrabold text-slate-900 tracking-tight mb-2">안녕하세요, ${HR.esc(HR.name())}님! 무엇이 궁금하신가요?</h2>
+        <p class="text-sm text-slate-500">아래 추천 키워드를 누르거나 직접 질문해 보세요.</p>
+      </div>`;
+  }
+  welcome();
+
+  function scroll() { stream.scrollTop = stream.scrollHeight; }
+  function ensureList() {
+    if (!stream.querySelector('.msg-list')) {
+      const d = new Date();
+      stream.innerHTML = `<div class="msg-list max-w-3xl mx-auto space-y-6"><div class="flex justify-center"><span class="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-medium">오늘 ${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})</span></div></div>`;
+    }
+    return stream.querySelector('.msg-list');
+  }
+  function addUser(text, anonymous) {
+    ensureList().insertAdjacentHTML('beforeend', `
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="max-w-[85%] lg:max-w-[70%] ${anonymous ? 'bg-slate-700' : 'bg-[#111827]'} text-white px-5 py-3.5 rounded-2xl rounded-tr-xs shadow-sm text-sm sm:text-[15px] leading-relaxed font-medium whitespace-pre-wrap">${HR.esc(text)}</div>
+        <div class="flex items-center gap-1.5 text-[11px] ${anonymous ? 'text-[#E60012]' : 'text-slate-400'} font-medium mr-1"><span class="material-symbols-outlined text-[13px]">${anonymous ? 'shield_person' : 'check_circle'}</span>${time()} · ${anonymous ? '익명 질문 · 대화 이력 미저장' : '본인 확인 완료'}</div>
+      </div>`);
+    scroll();
+  }
+  function addTyping() {
+    ensureList().insertAdjacentHTML('beforeend', `
+      <div class="typing flex items-start gap-3 sm:gap-4">${avatar()}
+        <div class="typing-card bg-white rounded-2xl rounded-tl-xs px-5 py-4 border border-slate-200 shadow-sm flex items-center gap-1.5"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="typing-text text-xs text-slate-400 ml-2">${admin ? '사규·법령·판례·행정해석을 확인하고 있어요…' : '사규와 법령을 확인하고 있어요…'}</span></div>
+      </div>`);
+    scroll();
+  }
+  // 검색 단계 안내 문구 갱신
+  function setTypingText(t) {
+    const el = stream.querySelector('.typing .typing-text');
+    if (el) el.textContent = t;
+  }
+  // 스트리밍 중 답변 미리보기 (완료되면 전체 카드로 교체)
+  let liveText = '', liveTimer = null;
+  function showLive() {
+    const box = stream.querySelector('.typing');
+    if (!box) return;
+    let bubble = box.querySelector('.live');
+    if (!bubble) {
+      box.querySelector('.typing-card').outerHTML = `<div class="live flex-1 min-w-0 max-w-2xl bg-white rounded-2xl rounded-tl-xs p-5 sm:p-6 border border-slate-200 shadow-sm">
+        <div class="md text-sm sm:text-[15px] text-slate-800"></div>
+        <div class="mt-3 flex items-center gap-1.5 text-[11px] text-slate-400"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ml-1">답변을 작성하고 있어요 · 근거·시각화는 완료 후 표시</span></div></div>`;
+      bubble = box.querySelector('.live');
+    }
+    bubble.querySelector('.md').innerHTML = HR.md(liveText);
+    scroll();
+  }
+  /** /api/chat/stream (SSE) 읽기 → 최종 결과 반환 */
+  async function streamChat(body) {
+    const resp = await fetch('/api/chat/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!resp.ok || !resp.body) {
+      const j = await resp.json().catch(() => ({}));
+      throw new Error(j.error || `요청 실패 (${resp.status})`);
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', final = null;
+    liveText = '';
+    const handle = (e) => {
+      if (e.type === 'stage' && e.stage === 'retrieved') {
+        const parts = Object.entries(e.counts || {}).map(([k, n]) => `${k} ${n}건`);
+        setTypingText(parts.length ? `근거를 찾았어요 (${parts.join(' · ')}) · 답변을 작성하고 있어요…` : '답변을 작성하고 있어요…');
+      } else if (e.type === 'delta') {
+        liveText += e.text;
+        if (!liveTimer) liveTimer = setTimeout(() => { liveTimer = null; showLive(); }, 60);
+      } else if (e.type === 'done') final = e;
+      else if (e.type === 'error') throw new Error(e.error);
+    };
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n\n')) >= 0) {
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+        const line = chunk.split('\n').find((l) => l.startsWith('data:'));
+        if (line) handle(JSON.parse(line.slice(5)));
+      }
+    }
+    clearTimeout(liveTimer); liveTimer = null;
+    if (!final) throw new Error('응답이 중간에 끊겼어요. 다시 시도해 주세요.');
+    return final;
+  }
+  function avatar() {
+    return `<div class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-red-50 border-2 border-red-200 p-0.5 overflow-hidden shrink-0 ring-2 ring-red-100"><img src="${HR.mascot()}" class="w-full h-full rounded-full" alt=""></div>`;
+  }
+  // 답변 속 [1] 같은 인용 번호 → 출처 배지
+  function citeBadges(html, sources) {
+    const ok = new Set(sources.map((s) => s.n));
+    return html.replace(/\[(\d{1,2})\]/g, (m, n) => ok.has(Number(n))
+      ? `<a href="#" data-cite="${n}" class="cite inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 mx-0.5 rounded-md bg-red-50 text-[#E60012] text-[10px] font-bold border border-red-200 align-text-top no-underline hover:bg-[#E60012] hover:text-white">${n}</a>`
+      : m);
+  }
+  // 근거 종류별 배지 색
+  const KIND_STYLE = {
+    사규: 'bg-slate-900 text-white', 법령: 'bg-[#0050CC] text-white', 판례: 'bg-violet-600 text-white',
+    행정규칙: 'bg-teal-600 text-white', 행정해석: 'bg-amber-500 text-white', 노동위원회: 'bg-emerald-600 text-white',
+  };
+  function sourceList(sources) {
+    if (!sources.length) return '';
+    const kinds = [...new Set(sources.map((s) => s.kind || '사규'))];
+    return `<div class="pt-3 border-t border-slate-100 space-y-2">
+      <div class="flex flex-wrap items-center gap-1.5 text-xs font-bold text-slate-700"><span class="material-symbols-outlined text-[16px] text-[#E60012]">menu_book</span>근거 자료
+        ${kinds.map((k) => `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${KIND_STYLE[k] || KIND_STYLE.사규}">${HR.esc(k)}</span>`).join('')}</div>
+      ${sources.map((s) => {
+        const kind = s.kind || '사규';
+        const meta = kind === '사규' ? `개정 ${HR.esc(s.revised)}` : kind === '법령' ? `시행 ${HR.esc(s.revised)}` : HR.esc(s.revised || '');
+        return `
+        <details class="src group rounded-xl border border-slate-200 bg-slate-50/60 open:bg-white" data-src="${s.n}">
+          <summary class="flex items-center gap-2 px-3 py-2 cursor-pointer list-none text-xs">
+            <span class="w-5 h-5 rounded-md bg-[#E60012] text-white flex items-center justify-center font-bold text-[10px] shrink-0">${s.n}</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${KIND_STYLE[kind] || KIND_STYLE.사규}">${HR.esc(kind)}</span>
+            ${kind === '사규' || kind === '법령' ? `<span class="font-bold text-slate-900 shrink-0 max-w-[45%] truncate">${HR.esc(s.doc)}</span>` : ''}
+            <span class="text-slate-600 truncate">${HR.esc(s.label)}</span>
+            <span class="ml-auto text-[10px] text-slate-400 shrink-0 hidden sm:inline">${meta}</span>
+            <span class="material-symbols-outlined text-[16px] text-slate-400 transition-transform group-open:rotate-180 shrink-0">expand_more</span>
+          </summary>
+          <div class="px-3 pb-2 text-[11px] text-slate-500 flex flex-wrap items-center gap-2">${HR.esc(s.path)}
+            ${s.url ? `<a href="${HR.esc(s.url)}" target="_blank" rel="noopener" class="inline-flex items-center gap-0.5 text-[#0050CC] font-semibold hover:underline">국가법령정보센터에서 보기<span class="material-symbols-outlined text-[13px]">open_in_new</span></a>` : ''}</div>
+          <div class="md mx-3 mb-3 p-3 rounded-lg bg-white border border-slate-100 text-xs text-slate-700 max-h-72 overflow-y-auto whitespace-pre-line">${kind === '사규' ? HR.md(s.text) : HR.esc(s.text)}</div>
+        </details>`;
+      }).join('')}
+    </div>`;
+  }
+
+
+  // ── 시각화 블록 렌더링 (stats / steps / timeline / chart)
+  const citeTag = (n) => (n ? `<span class="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded bg-red-50 text-[#E60012] text-[9px] font-bold border border-red-200 align-middle">${n}</span>` : '');
+  const visTitle = (icon, t) => (t ? `<div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-3"><span class="material-symbols-outlined text-[18px] text-[#E60012]">${icon}</span>${HR.esc(t)}</div>` : '');
+  const formulaNote = (f) => (f ? `<div class="mt-2.5 text-[11px] text-slate-500 flex items-start gap-1"><span class="material-symbols-outlined text-[14px] text-slate-400">calculate</span><span>계산식: ${HR.esc(f)}</span></div>` : '');
+  function visStats(v) {
+    const cols = v.items.length >= 4 ? 'sm:grid-cols-4' : v.items.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2';
+    return `${visTitle('insights', v.title)}<div class="grid grid-cols-2 ${cols} gap-2.5">${v.items.map((x) => `
+      <div class="rounded-xl border border-red-100 bg-gradient-to-b from-red-50/70 to-white p-3.5">
+        <div class="text-[11px] font-semibold text-slate-500 leading-snug">${HR.esc(x.label)}</div>
+        <div class="mt-1 flex items-baseline gap-0.5"><span class="text-2xl sm:text-[28px] font-extrabold text-[#E60012] tracking-tight">${HR.esc(x.value)}</span><span class="text-sm font-bold text-slate-700">${HR.esc(x.unit)}</span></div>
+        ${x.note || x.cite ? `<div class="mt-1 text-[11px] text-slate-500 leading-snug">${HR.esc(x.note)} ${citeTag(x.cite)}</div>` : ''}
+      </div>`).join('')}</div>`;
+  }
+  function visSteps(v) {
+    return `${visTitle('account_tree', v.title)}<ol class="relative space-y-0">${v.items.map((x, i) => `
+      <li class="relative flex gap-3 pb-4 last:pb-0">
+        ${i < v.items.length - 1 ? '<span class="absolute left-[13px] top-7 bottom-0 w-0.5 bg-red-100"></span>' : ''}
+        <span class="relative z-10 w-7 h-7 rounded-full ${i === 0 ? 'bg-[#E60012] text-white' : 'bg-white text-[#E60012] border-2 border-red-200'} flex items-center justify-center text-xs font-extrabold shrink-0">${i + 1}</span>
+        <div class="min-w-0 pt-0.5"><div class="text-sm font-bold text-slate-900">${HR.esc(x.title)} ${citeTag(x.cite)}</div>${x.desc ? `<div class="text-xs text-slate-600 leading-relaxed mt-0.5">${HR.esc(x.desc)}</div>` : ''}</div>
+      </li>`).join('')}</ol>`;
+  }
+  function visTimeline(v) {
+    const lo = Math.min(0, ...v.items.map((x) => x.start)), hi = Math.max(0, ...v.items.map((x) => x.end));
+    const span = hi - lo || 1, pct = (n) => ((n - lo) / span) * 100;
+    const fmt = (n) => (n === 0 ? v.anchor : n < 0 ? `${v.anchor} ${-n}${v.unit} 전` : `${v.anchor} 후 ${n}${v.unit}`);
+    return `${visTitle('date_range', v.title)}
+      <div class="space-y-3">${v.items.map((x) => `
+        <div>
+          <div class="flex items-center justify-between gap-2 text-xs mb-1"><span class="font-bold text-slate-800">${HR.esc(x.label)} ${citeTag(x.cite)}</span><span class="text-slate-500 shrink-0">${x.end - x.start}${HR.esc(v.unit)}간</span></div>
+          <div class="relative h-7 rounded-lg bg-slate-100">
+            <div class="absolute inset-y-0 rounded-lg bg-gradient-to-r from-red-400 to-[#E60012]" style="left:${pct(x.start)}%;width:${Math.max(2, pct(x.end) - pct(x.start))}%"></div>
+            <div class="absolute -top-1 -bottom-1 w-0.5 bg-slate-900" style="left:${pct(0)}%" title="${HR.esc(v.anchor)}"></div>
+          </div>
+          <div class="relative h-4 mt-1 text-[10px] text-slate-500">
+            <span class="absolute -translate-x-1/2 whitespace-nowrap" style="left:${Math.min(92, Math.max(8, pct(x.start)))}%">${HR.esc(fmt(x.start))}</span>
+            <span class="absolute -translate-x-1/2 whitespace-nowrap" style="left:${Math.min(92, Math.max(8, pct(x.end)))}%">${HR.esc(fmt(x.end))}</span>
+          </div>
+          ${x.note ? `<div class="text-[11px] text-slate-500 mt-0.5">${HR.esc(x.note)}</div>` : ''}
+        </div>`).join('')}
+        <div class="flex items-center gap-1.5 text-[10px] text-slate-500"><span class="w-0.5 h-3 bg-slate-900"></span>${HR.esc(v.anchor)} (기준일)</div>
+      </div>${formulaNote(v.formula)}`;
+  }
+  let chartSeq = 0;
+  function visChart(v) {
+    const id = 'vchart-' + ++chartSeq;
+    const h = v.chart === 'range' ? Math.max(140, v.labels.length * 44 + 50) : 240;
+    return `${visTitle(v.chart === 'line' ? 'show_chart' : 'bar_chart', v.title)}
+      <div style="height:${h}px" class="relative"><canvas id="${id}" data-chart='${HR.esc(JSON.stringify(v))}' aria-label="${HR.esc(v.title)} 그래프" role="img"></canvas></div>
+      <div class="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1">${v.unit ? `단위: ${HR.esc(v.unit)}` : ''} ${citeTag(v.cite)}</div>${formulaNote(v.formula)}`;
+  }
+  function visualsHtml(list) {
+    if (!list || !list.length) return '';
+    const render = { stats: visStats, steps: visSteps, timeline: visTimeline, chart: visChart };
+    return list.filter((v) => render[v.type]).map((v) => `<div class="vis rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4">${render[v.type](v)}</div>`).join('');
+  }
+  // Chart.js는 그래프가 있을 때만 불러옴
+  let chartLib = null;
+  function loadChartLib() {
+    if (window.Chart) return Promise.resolve();
+    if (!chartLib) chartLib = new Promise((ok, fail) => { const s = document.createElement('script'); s.src = '/vendor/chartjs/chart.umd.min.js'; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
+    return chartLib;
+  }
+  const PALETTE = ['#E60012', '#111827', '#94A3B8'];
+  async function drawCharts(root) {
+    const canvases = root.querySelectorAll('canvas[data-chart]');
+    if (!canvases.length) return;
+    try { await loadChartLib(); } catch { return; }
+    Chart.defaults.font.family = "'Pretendard', system-ui, sans-serif";
+    Chart.defaults.color = '#475569';
+    canvases.forEach((cv) => {
+      const v = JSON.parse(cv.dataset.chart);
+      const range = v.chart === 'range';
+      const fmt = (n) => Number(n).toLocaleString('ko-KR') + (v.unit ? ' ' + v.unit : '');
+      new Chart(cv, {
+        type: range ? 'bar' : v.chart,
+        data: {
+          labels: v.labels,
+          datasets: v.series.map((s, i) => ({
+            label: s.name, data: s.data,
+            backgroundColor: range ? 'rgba(230,0,18,0.75)' : i === 0 ? 'rgba(230,0,18,0.85)' : PALETTE[i % 3],
+            borderColor: PALETTE[i % 3], borderWidth: v.chart === 'line' ? 2.5 : 0, borderRadius: 6, borderSkipped: false,
+            pointBackgroundColor: PALETTE[i % 3], tension: 0.25, maxBarThickness: 34,
+          })),
+        },
+        options: {
+          maintainAspectRatio: false,
+          indexAxis: range ? 'y' : 'x',
+          plugins: {
+            legend: { display: v.series.length > 1, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${Array.isArray(c.raw) ? fmt(c.raw[0]) + ' ~ ' + fmt(c.raw[1]) : fmt(c.raw)}` } },
+          },
+          scales: (() => {
+            // 값 축만 천 단위 콤마 (카테고리 축은 Chart.js 기본 라벨을 그대로 써야 하므로 callback 키를 넣지 않음)
+            const valueTicks = { font: { size: 11 }, callback: (n) => Number(n).toLocaleString('ko-KR') };
+            const catTicks = { font: { size: 11 } };
+            return range
+              ? { x: { grid: { color: '#F1F5F9' }, ticks: valueTicks }, y: { grid: { display: false }, ticks: catTicks } }
+              : { x: { grid: { display: false }, ticks: catTicks }, y: { grid: { color: '#F1F5F9' }, beginAtZero: true, ticks: valueTicks } };
+          })(),
+        },
+      });
+    });
+  }
+
+  // eHR 메뉴 바로가기 카드 (시연용 경로)
+  function ehrCard(list) {
+    if (!list || !list.length) return '';
+    return `<div class="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white p-3.5 sm:p-4 space-y-3">
+      <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800"><span class="material-symbols-outlined text-[18px] text-[#E60012]">open_in_new</span>eHR에서 바로 처리하기</div>
+      ${list.map((e, i) => `
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 ${i ? 'pt-3 border-t border-slate-100' : ''}">
+          <div class="min-w-0 flex-1 space-y-1">
+            <div class="flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
+              ${e.path.map((p, k) => `<span class="${k === e.path.length - 1 ? 'px-2 py-0.5 rounded-md bg-[#111827] text-white font-bold' : 'font-medium'}">${HR.esc(p)}</span>${k < e.path.length - 1 ? '<span class="material-symbols-outlined text-[14px] text-slate-300">chevron_right</span>' : ''}`).join('')}
+            </div>
+            ${e.note ? `<div class="text-xs text-slate-700"><span class="font-semibold text-[#E60012]">선택</span> ${HR.esc(e.note)}</div>` : ''}
+            <div class="text-[11px] text-slate-400">${HR.esc(e.desc)}</div>
+          </div>
+          <button type="button" data-ehr="${HR.esc(e.path.join(' > '))}" class="ehr-go shrink-0 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-lg bg-[#E60012] hover:bg-red-700 text-white text-xs font-bold"><span class="material-symbols-outlined text-[16px]">login</span>${HR.esc(e.menu)} 열기</button>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  // 답변 평가 카드: 별점 → (태그 + 개선 의견) → 제출
+  const GOOD_TAGS = ['정확해요', '이해하기 쉬워요', '근거가 확실해요'];
+  const BAD_TAGS = ['정확하지 않아요', '근거가 부족해요', '이해하기 어려워요', '너무 길어요', '원하는 답이 아니에요'];
+  function ratingCard() {
+    return `<div class="rate pt-3 border-t border-slate-100 space-y-2.5">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span class="text-xs font-bold text-slate-700">이 답변이 도움이 되었나요?</span>
+        <div class="stars flex items-center" role="radiogroup" aria-label="답변 평가">
+          ${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-star="${n}" aria-label="${n}점" class="star w-7 h-7 flex items-center justify-center text-slate-300 hover:text-amber-400"><span class="material-symbols-outlined text-[22px]">star</span></button>`).join('')}
+        </div>
+        <span class="star-label text-[11px] text-slate-400"></span>
+      </div>
+      <div class="rate-more hidden space-y-2">
+        <div class="tags flex flex-wrap gap-1.5"></div>
+        <textarea rows="2" maxlength="1000" class="w-full text-xs border border-slate-200 rounded-lg p-2.5 outline-none focus:border-[#E60012] resize-none" placeholder="개선되었으면 하는 점을 알려주세요. (선택)"></textarea>
+        <div class="flex justify-end"><button type="button" class="rate-submit px-3.5 py-1.5 rounded-lg bg-[#111827] hover:bg-[#E60012] text-white text-xs font-bold">평가 보내기</button></div>
+      </div>
+    </div>`;
+  }
+  const STAR_TEXT = ['', '전혀 도움이 안 됐어요', '별로였어요', '보통이에요', '도움이 됐어요', '아주 도움이 됐어요'];
+  function bindRating(root, ctx) {
+    const box = root.querySelector('.rate');
+    let rating = 0;
+    const tags = new Set();
+    const paint = (n) => box.querySelectorAll('.star').forEach((s) => {
+      const on = Number(s.dataset.star) <= n;
+      s.classList.toggle('text-amber-400', on); s.classList.toggle('text-slate-300', !on);
+      s.querySelector('span').classList.toggle('fill-icon', on);
+    });
+    box.querySelectorAll('.star').forEach((s) => (s.onclick = () => {
+      rating = Number(s.dataset.star); paint(rating);
+      box.querySelector('.star-label').textContent = STAR_TEXT[rating];
+      tags.clear();
+      const list = rating >= 4 ? GOOD_TAGS : BAD_TAGS;
+      box.querySelector('.tags').innerHTML = list.map((t) => `<button type="button" data-tag="${t}" class="tag px-2.5 py-1 rounded-full border border-slate-200 text-[11px] text-slate-600 hover:border-red-200">${t}</button>`).join('');
+      box.querySelectorAll('.tag').forEach((b) => (b.onclick = () => {
+        const on = !tags.has(b.dataset.tag);
+        on ? tags.add(b.dataset.tag) : tags.delete(b.dataset.tag);
+        b.className = 'tag px-2.5 py-1 rounded-full border text-[11px] ' + (on ? 'border-[#E60012] bg-red-50 text-[#E60012] font-bold' : 'border-slate-200 text-slate-600 hover:border-red-200');
+      }));
+      box.querySelector('textarea').placeholder = rating >= 4 ? '좋았던 점이나 더 바라는 점이 있다면 알려주세요. (선택)' : '어떤 점이 부족했는지, 어떻게 개선되면 좋을지 알려주세요. (선택)';
+      if (ctx.anonymous) box.querySelector('textarea').remove(); // 익명 질문은 자유 의견을 받지 않음 (점수·태그만)
+      box.querySelector('.rate-more').classList.remove('hidden');
+      scroll();
+    }));
+    box.querySelector('.rate-submit').onclick = async (e) => {
+      e.target.disabled = true;
+      try {
+        await HR.api('/api/feedback', { method: 'POST', body: {
+          role: admin ? 'admin' : 'employee', rating, tags: [...tags], comment: (box.querySelector('textarea')?.value || '').trim(),
+          anonymous: ctx.anonymous, question: ctx.question, answer: ctx.answer, sources: ctx.sources.map((s) => `${s.doc} ${s.label}`),
+        } });
+        box.innerHTML = `<div class="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold"><span class="material-symbols-outlined text-[16px]">task_alt</span>소중한 평가 감사합니다! 더 나은 답변을 위해 활용할게요.${ctx.anonymous ? ' (익명 질문이라 점수와 선택한 항목만 저장돼요)' : ''}</div>`;
+      } catch (err) { e.target.disabled = false; HR.toast(err.message); }
+    };
+  }
+
+  function addBot({ answer, elapsed, sensitive = [], sources = [], ehr = [], visuals = [], followups = [], personal = false, anonymous = false, question = '', error }) {
+    stream.querySelector('.typing')?.remove();
+    const list = ensureList();
+    if (error) {
+      list.insertAdjacentHTML('beforeend', `<div class="flex items-start gap-3 sm:gap-4">${avatar()}<div class="bg-red-50 border border-red-200 text-red-700 rounded-2xl rounded-tl-xs p-4 text-sm">${HR.esc(error)}</div></div>`);
+      return scroll();
+    }
+    lastAnswer = answer;
+    let notice = personal ? `<div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 sm:p-4 space-y-1.5">
+        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-700"><span class="material-symbols-outlined text-[18px]">database</span>개인별 정보 안내</div>
+        <p class="text-xs text-slate-600 leading-relaxed pl-6">잔여 연차·급여 같은 <strong>본인 수치</strong>는 규정 문서가 아니라 eHR에서 조회돼요. 아래 eHR 바로가기를 이용하세요. 위 답변은 적용 기준만 안내합니다.</p></div>` : '';
+    if (sensitive.length && admin) {
+      notice += `<div class="bg-red-50/50 border border-red-200 rounded-xl p-3.5 sm:p-4 space-y-1.5">
+        <div class="flex items-center gap-1.5 text-xs font-bold text-[#E60012]"><span class="material-symbols-outlined text-[18px]">warning</span>노무 리스크 주의 안내</div>
+        <p class="text-xs text-slate-700 leading-relaxed pl-6 font-medium"><strong>${HR.esc(sensitive.join(', '))}</strong> 관련 사안은 분쟁 위험이 있으므로, 조치 전 반드시 <strong>노무 담당 부서와 사전 협의</strong>하시기 바랍니다.</p></div>`;
+    } else if (sensitive.length) {
+      notice += `<div class="bg-sky-50/70 border border-sky-200 rounded-xl p-3.5 sm:p-4 space-y-1.5">
+        <div class="flex items-center gap-1.5 text-xs font-bold text-sky-800"><span class="material-symbols-outlined text-[18px]">support_agent</span>상담 연결 안내</div>
+        <p class="text-xs text-slate-700 leading-relaxed pl-6">어려운 상황이라면 혼자 고민하지 마세요. 사내 고충처리 창구에서 <strong>비밀이 보장되는 상담</strong>을 받을 수 있습니다. 이 대화 내용은 누구에게도 전달되지 않아요.</p></div>`;
+    }
+    list.insertAdjacentHTML('beforeend', `
+      <div class="flex items-start gap-3 sm:gap-4">${avatar()}
+        <div class="flex-1 space-y-2 min-w-0 max-w-2xl">
+          <div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-900">${HR.botName()}</span>
+            <span class="px-2 py-0.5 rounded-full bg-red-50 text-[#E60012] text-[10px] font-bold border border-red-200">AI 답변</span><span class="text-[11px] text-slate-400">${time()}</span></div>
+          <div class="bg-white rounded-2xl rounded-tl-xs p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center gap-2 pb-3 border-b border-slate-100"><span class="material-symbols-outlined text-[#E60012] text-[20px]">verified</span>
+              <h4 class="text-sm sm:text-base font-bold text-slate-900">${anonymous ? '익명으로 안내해 드릴게요!' : HR.esc(HR.name()) + '님, 안내해 드릴게요!'}</h4></div>
+            ${visualsHtml(visuals)}
+            <div class="md text-sm sm:text-[15px] text-slate-800">${citeBadges(HR.md(answer), sources)}</div>
+            ${ehrCard(ehr)}
+            ${notice}
+            ${sourceList(sources)}
+            <div class="flex items-center gap-1.5 text-slate-400 text-[11px]"><span class="material-symbols-outlined text-[13px] text-emerald-500">bolt</span>${(elapsed || 0).toFixed(1)}초 만에 답변 생성 · 사내 규정 ${sources.length}건 근거</div>
+            ${ratingCard()}
+          </div>
+        </div>
+      </div>`);
+    const last = list.lastElementChild;
+    last.querySelectorAll('.cite').forEach((a) => (a.onclick = (e) => {
+      e.preventDefault();
+      const d = last.querySelector(`details[data-src="${a.dataset.cite}"]`);
+      if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    }));
+    drawCharts(last);
+    last.querySelectorAll('.ehr-go').forEach((b) => (b.onclick = () => HR.toast(`eHR [${b.dataset.ehr}] 화면으로 이동합니다 (시연용)`)));
+    bindRating(last, { anonymous, question, answer, sources });
+    showFollowups(followups);
+    scroll();
+  }
+
+  // ── 민감 질문 감지 → 익명 질문 체크박스 자동 표시 (입력 중 디바운스)
+  const anonBox = document.getElementById('anon-box');
+  const anonChk = document.getElementById('anon');
+  let senseTimer = null, senseSeq = 0;
+  function setAnonVisible(on) {
+    if (on && anonBox.classList.contains('hidden')) {
+      anonBox.classList.remove('hidden');
+      anonBox.classList.add('anon-pop');
+    }
+    if (!on && !anonChk.checked) anonBox.classList.add('hidden');
+  }
+  async function checkSensitivity(text) {
+    const seq = ++senseSeq;
+    if (text.trim().length < 6) return setAnonVisible(false);
+    try {
+      const r = await HR.api('/api/sensitivity', { method: 'POST', body: { text } });
+      if (seq === senseSeq) setAnonVisible(r.sensitive);
+    } catch {}
+  }
+  qInput.addEventListener('input', () => {
+    clearTimeout(senseTimer);
+    senseTimer = setTimeout(() => checkSensitivity(qInput.value), 500);
+  });
+
+  let busy = false;
+  async function send(text) {
+    text = (text ?? qInput.value).trim();
+    if (!text || busy) return;
+    clearTimeout(senseTimer); senseSeq++;
+    const anonymous = anonChk.checked && !anonBox.classList.contains('hidden');
+    busy = true; sendBtn.disabled = true; qInput.value = '';
+    anonChk.checked = false; anonBox.classList.add('hidden');
+    addUser(text, anonymous); addTyping();
+    try {
+      // 익명 질문은 매번 새 세션 ID → 이전 대화와 연결되지 않음
+      const sessionId = anonymous ? 'anon-' + Math.random().toString(36).slice(2) : HR.sessionId();
+      const r = await streamChat({ role: admin ? 'admin' : 'employee', message: text, sessionId, anonymous });
+      addBot({ ...r, question: text });
+    } catch (e) { addBot({ error: e.message }); }
+    busy = false; sendBtn.disabled = false; qInput.focus();
+  }
+
+  document.getElementById('ask').addEventListener('submit', (e) => { e.preventDefault(); send(); });
+  document.getElementById('btn-reset').onclick = async () => {
+    await HR.api('/api/chat', { method: 'POST', body: { role: admin ? 'admin' : 'employee', sessionId: HR.sessionId(), reset: true } }).catch(() => {});
+    welcome(); showDefaultChips(); HR.toast('새 대화를 시작합니다.');
+  };
+  document.getElementById('btn-tts').onclick = () => {
+    if (!lastAnswer || !('speechSynthesis' in window)) return HR.toast('읽어드릴 답변이 없어요.');
+    speechSynthesis.cancel();
+    const div = document.createElement('div'); div.innerHTML = HR.md(lastAnswer);
+    const u = new SpeechSynthesisUtterance(div.textContent.slice(0, 600)); u.lang = 'ko-KR'; speechSynthesis.speak(u);
+  };
+  document.getElementById('btn-mic').onclick = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return HR.toast('이 브라우저는 음성 입력을 지원하지 않아요.');
+    const rec = new SR(); rec.lang = 'ko-KR';
+    rec.onresult = (e) => { qInput.value = e.results[0][0].transcript; send(); };
+    rec.start(); HR.toast('말씀해 주세요…');
+  };
+
+  const pre = new URLSearchParams(location.search).get('q');
+  if (pre) { history.replaceState(null, '', '/chat.html'); send(pre); }
+}
+</script>
+</body></html>

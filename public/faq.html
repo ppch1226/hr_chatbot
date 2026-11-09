@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/vendor/pretendard/pretendard.css">
+<link rel="stylesheet" href="/vendor/symbols/outlined.css">
+<link rel="stylesheet" href="/css/app.css">
+<script src="/vendor/tailwind/index.global.js"></script>
+<script src="/vendor/marked/marked.min.js"></script>
+<script src="/vendor/dompurify/purify.min.js"></script>
+<script src="/js/common.js"></script>
+
+<title>KT IS 인사해삐 - 자주 찾는 질문</title>
+</head>
+<body class="min-h-screen flex flex-col relative">
+<main class="relative z-20 flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+    <aside class="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-6">
+      <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-100">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-[#e60012] border border-red-100 mb-4"><span class="material-symbols-outlined text-[15px]">quiz</span>KT IS 사내 HR 가이드</span>
+        <h2 class="text-2xl font-bold text-slate-900 leading-tight mb-3">자주 찾는 질문<br><span class="text-[#e60012]">(FAQ)</span></h2>
+        <p class="text-sm text-slate-600 leading-relaxed">KT IS 임직원들이 가장 자주 문의하는 근태, 휴가, 복지, 급여 규정을 한곳에 정리했습니다. 원하는 답변을 찾지 못하셨다면 언제든 인사해삐 챗봇에 물어보세요.</p>
+        <div class="mt-6 pt-5 border-t border-slate-100">
+          <p class="text-xs font-bold text-slate-400 mb-3 px-1">카테고리 바로가기</p>
+          <div id="cats" class="flex flex-col space-y-1"></div>
+        </div>
+      </div>
+    </aside>
+    <section class="lg:col-span-8 xl:col-span-9">
+      <div class="bg-white rounded-3xl shadow-xl border border-slate-200/90 p-5 sm:p-8 flex flex-col gap-6 ring-1 ring-black/5">
+        <form id="search" class="relative bg-white border-2 border-slate-200 rounded-2xl p-2 sm:p-2.5 flex items-center gap-2 focus-within:border-[#E60012] focus-within:ring-4 focus-within:ring-red-500/10 transition-all">
+          <span class="material-symbols-outlined text-slate-400 text-[22px] pl-2">search</span>
+          <input id="kw" class="flex-1 min-w-0 bg-transparent border-0 text-sm md:text-base placeholder-slate-400 px-2 outline-none" placeholder="궁금한 규정이나 키워드를 검색해보세요 (예: 경조휴가, 육아휴직, 복지포인트)">
+          <button class="h-11 px-5 rounded-xl bg-[#111827] hover:bg-[#E60012] text-white font-semibold text-sm shrink-0">검색</button>
+        </form>
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3"><span class="text-sm font-bold text-slate-900">자주 묻는 질문 목록</span><span id="count" class="text-xs text-slate-400"></span></div>
+        <div id="list" class="space-y-4"></div>
+        <div class="mt-2 p-5 rounded-2xl bg-gradient-to-r from-red-50/70 to-slate-50 border border-red-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-full bg-white border border-red-200 flex items-center justify-center text-[#E60012] shrink-0"><span class="material-symbols-outlined text-[20px]">contact_support</span></div>
+            <div><h4 class="text-sm font-bold text-slate-900">찾으시는 내용이 없으신가요?</h4><p class="text-xs text-slate-500 mt-0.5">AI 인사해삐에게 사내 취업규칙 및 복지 제도를 자연어로 편하게 질문해보세요.</p></div>
+          </div>
+          <a id="ask-link" href="/chat.html" class="px-4 py-2.5 rounded-xl bg-[#E60012] hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0"><span class="material-symbols-outlined text-[16px]">smart_toy</span>인사해삐 실시간 질문하기</a>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+<script>
+if (HR.guard()) {
+  HR.layout('/faq.html');
+  const ICON = { '근태·연차': 'event_available', '복지·포인트': 'card_giftcard', '급여·퇴직금': 'payments', '모성보호·육아': 'family_restroom', '인사·평가': 'badge' };
+  let all = [], cat = '전체', kw = '', open = null;
+
+  function renderCats() {
+    const counts = all.reduce((m, f) => ((m[f.category] = (m[f.category] || 0) + 1), m), {});
+    const items = [['전체', 'apps', all.length], ...Object.entries(counts).map(([k, v]) => [k, ICON[k] || 'label', v])];
+    document.getElementById('cats').innerHTML = items.map(([k, ic, n]) => {
+      const on = k === cat;
+      return `<button data-cat="${HR.esc(k)}" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs ${on ? 'font-bold bg-red-50 text-[#E60012]' : 'font-medium text-slate-600 hover:bg-slate-50'}">
+        <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] ${on ? '' : 'text-slate-400'}">${ic}</span>${k === '전체' ? '전체 보기' : HR.esc(k)}</span>
+        <span class="text-[11px] ${on ? 'px-2 py-0.5 rounded-full bg-white border border-red-200' : 'text-slate-400'}">${n}</span></button>`;
+    }).join('');
+    document.querySelectorAll('[data-cat]').forEach((b) => (b.onclick = () => { cat = b.dataset.cat; render(); }));
+  }
+
+  function render() {
+    renderCats();
+    const list = all.filter((f) => (cat === '전체' || f.category === cat) && (!kw || (f.question + f.answer + f.basis).includes(kw)));
+    document.getElementById('count').textContent = `${list.length}건`;
+    if (open === null && list[0]) open = list[0].id;
+    document.getElementById('list').innerHTML = list.length ? list.map((f) => {
+      const on = f.id === open;
+      return `<div class="border ${on ? 'border-red-200 bg-red-50/20' : 'border-slate-200 hover:border-slate-300'} rounded-2xl overflow-hidden transition-all">
+        <button data-open="${f.id}" class="w-full p-5 flex items-start justify-between gap-4 text-left">
+          <div class="flex items-start gap-3"><span class="px-2.5 py-1 rounded ${on ? 'bg-red-50 text-[#E60012] border border-red-200 font-bold' : 'bg-slate-100 text-slate-700 font-semibold'} text-xs shrink-0 mt-0.5">${HR.esc(f.category)}</span>
+          <h3 class="text-base font-bold text-slate-900 leading-snug">${HR.esc(f.question)}</h3></div>
+          <span class="material-symbols-outlined text-slate-400 text-[22px] shrink-0">${on ? 'expand_less' : 'expand_more'}</span></button>
+        ${on ? `<div class="px-5 pb-5 pt-1 space-y-3.5 border-t border-red-100/60">
+          <div class="md text-sm text-slate-700 pt-3">${HR.md(f.answer)}</div>
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2 text-xs text-slate-600"><span class="material-symbols-outlined text-[#E60012] text-[16px]">description</span><span class="font-semibold text-slate-800">관련 근거 규정:</span><span>${HR.esc(f.basis || '-')}</span></div>
+            <a href="/chat.html?q=${encodeURIComponent(f.question)}" class="inline-flex items-center gap-1 text-xs text-[#E60012] font-bold hover:underline">챗봇에 더 묻기<span class="material-symbols-outlined text-[14px]">arrow_forward</span></a>
+          </div></div>` : ''}
+      </div>`;
+    }).join('') : '<div class="text-center text-sm text-slate-400 py-12">검색 결과가 없습니다. 인사해삐에게 직접 물어보세요.</div>';
+    document.querySelectorAll('[data-open]').forEach((b) => (b.onclick = () => { open = open === b.dataset.open ? '' : b.dataset.open; render(); }));
+  }
+
+  document.getElementById('search').addEventListener('submit', (e) => {
+    e.preventDefault(); kw = document.getElementById('kw').value.trim(); open = null; render();
+    document.getElementById('ask-link').href = '/chat.html' + (kw ? '?q=' + encodeURIComponent(kw) : '');
+  });
+  HR.api('/api/faq?status=게시').then((d) => { all = d; render(); });
+}
+</script>
+</body></html>

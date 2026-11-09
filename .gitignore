@@ -1,0 +1,14 @@
+node_modules
+.env
+data
+bin/
+models/
+qdrant_storage/
+
+# 공개 저장소: 규정 원문과 규정 문구가 들어간 평가 결과는 올리지 않음 (로컬에만 보관)
+docs/regulations/*
+!docs/regulations/README.md
+eval/
+
+# 로컬 도구 설정
+.claude/

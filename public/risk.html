@@ -1,0 +1,107 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/vendor/pretendard/pretendard.css">
+<link rel="stylesheet" href="/vendor/symbols/outlined.css">
+<link rel="stylesheet" href="/css/app.css">
+<script src="/vendor/tailwind/index.global.js"></script>
+<script src="/vendor/marked/marked.min.js"></script>
+<script src="/vendor/dompurify/purify.min.js"></script>
+<script src="/js/common.js"></script>
+
+<title>KT IS 인사해삐 - 리스크 조기 알림</title>
+</head>
+<body class="min-h-screen flex flex-col relative">
+<main class="relative z-20 flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-7 shadow-sm">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-[#E60012]"><span class="material-symbols-outlined text-[24px]">trending_up</span></div>
+          <h2 class="font-bold text-slate-900 text-xl sm:text-2xl">고위험 검색어 통계</h2></div>
+        <span class="text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200/70 px-3.5 py-1.5 rounded-full">비식별 실시간 집계</span>
+      </div>
+      <div id="stats" class="mt-5 space-y-4"></div>
+    </div>
+    <div class="lg:col-span-6 bg-red-50/70 border border-red-200 rounded-2xl p-6 sm:p-7 shadow-sm">
+      <div class="flex items-center justify-between pb-4 border-b border-red-100">
+        <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-red-100 text-[#E60012] flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">notification_important</span></div>
+          <h2 class="font-bold text-slate-900 text-xl sm:text-2xl">🚨 리스크 브리프</h2></div>
+        <span class="text-xs font-semibold text-slate-600 bg-white border border-slate-200/70 px-3.5 py-1.5 rounded-full">질문 통계 기반 자동 분석</span>
+      </div>
+      <div id="brief" class="mt-4 space-y-4"></div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+    <div class="p-6 lg:p-7 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="space-y-1"><h2 class="font-bold text-slate-900 flex items-center gap-2.5 text-[22px] sm:text-[26px]"><span class="material-symbols-outlined text-[#E60012] text-[28px]">format_list_bulleted</span>리스크 조기 알림 관리</h2>
+        <p class="text-xs md:text-sm text-slate-500">취업규칙 및 노무 리스크 관련 이상 징후 키워드를 감지하여 선제적 대응을 지원합니다. 개인을 식별하는 정보는 수집하지 않습니다.</p></div>
+      <div class="relative flex items-center w-full md:w-80"><span class="material-symbols-outlined absolute left-3 text-slate-400 text-[20px]">search</span>
+        <input id="kw" class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#E60012]" placeholder="리포트 제목 또는 키워드 검색"></div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse min-w-[860px]">
+        <thead><tr class="bg-slate-50 border-b border-slate-200 text-base font-bold text-slate-900">
+          <th class="py-4 px-4 w-20 text-center">ID</th><th class="py-4 px-4 w-36">분류</th><th class="py-4 px-4">감지 키워드 및 리스크 요약</th><th class="py-4 px-4 w-40 text-center">감지일시</th><th class="py-4 pl-4 pr-6 w-40 text-center">조치 상태</th></tr></thead>
+        <tbody id="rows" class="divide-y divide-slate-200 text-sm"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<script>
+if (HR.guard(true)) {
+  HR.layout('/risk.html');
+  const ADVICE = {
+    '괴롭힘': '조직문화를 면밀히 점검하고 직장 내 괴롭힘 예방 교육과 고충 상담 채널을 선제적으로 강화하세요.',
+    '부당(인사·처우)': '인사명령의 업무상 필요성과 생활상 불이익을 사전에 점검하고, 대상자 면담 절차를 마련하세요.',
+    '갑질': '관리자 대상 행동 가이드를 재공지하고 익명 신고 채널의 접근성을 높이세요.',
+    '해고 / 징계': '징계 절차(사전 통지, 소명 기회, 위원회 구성)의 준수 여부를 점검하세요.',
+    '성희롱 예방·상담': '피해자 보호조치 매뉴얼과 상담원 배정 체계를 점검하고 예방 교육 이수 현황을 확인하세요.',
+  };
+  HR.api('/api/stats').then((s) => {
+    document.getElementById('stats').innerHTML = HR.statBars(s.sensitive);
+    const [a, b] = s.sensitive;
+    const card = (x, tone, label) => `<div class="p-5 rounded-xl bg-white border ${tone === 'red' ? 'border-red-200' : 'border-amber-200'} space-y-2.5">
+      <div class="flex flex-wrap items-center gap-2"><span class="inline-flex px-3 py-1 rounded-md text-xs font-extrabold ${tone === 'red' ? 'bg-red-50 text-[#E60012] border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">${label}</span>
+      <span class="text-xs text-slate-500 font-medium">'${HR.esc(x.key)}' 관련 문의 ${x.count.toLocaleString()}건 (고위험 문의의 ${x.pct}%)</span></div>
+      <p class="text-base text-slate-900 font-semibold leading-relaxed">“<span class="${tone === 'red' ? 'text-[#E60012]' : ''} font-bold">${HR.esc(x.key)}</span> 관련 문의 비중이 높습니다. ${ADVICE[x.key] || ''}”</p></div>`;
+    document.getElementById('brief').innerHTML = (a ? card(a, 'red', '긴급 점검 권고') : '') + (b ? card(b, 'amber', '사전 주의 권고') : '');
+  });
+
+  let all = [], open = '001';
+  function render() {
+    const kw = document.getElementById('kw').value.trim();
+    const list = all.filter((r) => !kw || (r.title + r.category + r.diagnosis).includes(kw));
+    document.getElementById('rows').innerHTML = list.map((r) => {
+      const on = r.id === open;
+      return `<tr class="hover:bg-slate-50/70 cursor-pointer group ${on ? 'bg-slate-50/40' : ''}" data-open="${r.id}">
+        <td class="py-4 px-4 text-center font-semibold text-slate-500 text-xs">${r.id}</td>
+        <td class="py-4 px-4"><span class="inline-flex px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">${HR.esc(r.category)}</span></td>
+        <td class="py-4 px-4"><div class="flex items-center justify-between gap-2"><span class="text-base md:text-lg font-semibold text-slate-900 group-hover:text-[#E60012] leading-snug">${HR.esc(r.title)}</span>
+          <span class="material-symbols-outlined text-[18px] transition-transform ${on ? 'rotate-180 text-[#E60012]' : 'text-slate-400'}">keyboard_arrow_down</span></div></td>
+        <td class="py-4 px-4 text-center text-xs text-slate-500 font-medium">${HR.esc(r.detectedAt.replace(/-/g, '.'))}</td>
+        <td class="py-4 pl-4 pr-6 text-center" onclick="event.stopPropagation()"><div class="flex items-center justify-center gap-1.5">
+          ${['미확인', '확인'].map((s) => `<button data-id="${r.id}" data-st="${s}" class="px-2.5 py-1 rounded-md text-xs ${r.status === s ? 'bg-[#E60012] text-white font-bold' : 'border border-slate-300 hover:bg-slate-100 text-slate-700 font-medium'}">${s}</button>`).join('')}</div></td>
+      </tr>
+      ${on ? `<tr><td colspan="5" class="p-0 bg-slate-50/70 border-b border-slate-200"><div class="p-5 md:p-8"><div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-[#E60012] text-[22px]">psychology</span><span class="font-bold text-slate-900 text-base">인사해삐 AI 사전 법률 리스크 진단 요약</span></div>
+          <span class="text-xs text-slate-700 font-semibold bg-slate-100 border border-slate-200 px-3 py-1 rounded-full">${HR.esc(r.level)}</span></div>
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-sm leading-relaxed space-y-2">
+          <p><strong class="text-slate-900">• 상황 진단:</strong> ${HR.esc(r.diagnosis)}</p><p><strong class="text-slate-900">• 법적 리스크:</strong> ${HR.esc(r.legal)}</p></div>
+        <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm leading-relaxed space-y-2"><div class="flex items-center gap-2 text-amber-700 font-bold"><span class="material-symbols-outlined text-[20px]">verified</span>권고 조치 (HR Actionable Advice)</div>
+          ${r.actions.map((a, i) => `<p class="pl-1"><strong>• ${i + 1}단계:</strong> ${HR.esc(a)}</p>`).join('')}</div>
+        ${r.basis ? `<div class="flex items-start gap-3 p-4 rounded-xl bg-blue-50/70 border border-blue-100 text-blue-900"><span class="material-symbols-outlined text-blue-600 text-[22px]">gavel</span><div class="text-xs"><strong class="text-sm block">관련 규정 근거</strong>${HR.esc(r.basis)}</div></div>` : ''}
+        <div class="flex justify-end"><a href="/chat.html?q=${encodeURIComponent(r.category + ' 사안 대응 절차와 관련 법령을 정리해줘')}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold"><span class="material-symbols-outlined text-[16px]">smart_toy</span>인사해삐M에게 대응 절차 묻기</a></div>
+      </div></div></td></tr>` : ''}`;
+    }).join('');
+    document.querySelectorAll('[data-open]').forEach((r) => (r.onclick = () => { open = open === r.dataset.open ? '' : r.dataset.open; render(); }));
+    document.querySelectorAll('[data-st]').forEach((b) => (b.onclick = async () => {
+      const u = await HR.api('/api/risks/' + b.dataset.id, { method: 'PATCH', body: { status: b.dataset.st } });
+      all = all.map((x) => (x.id === u.id ? u : x)); render();
+    }));
+  }
+  document.getElementById('kw').oninput = render;
+  HR.api('/api/risks').then((d) => { all = d; render(); });
+}
+</script>
+</body></html>
