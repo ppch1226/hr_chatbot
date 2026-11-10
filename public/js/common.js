@@ -5,8 +5,20 @@ window.HR = (() => {
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
     del(k) { try { localStorage.removeItem(k); } catch {} },
   };
-  const role = () => store.get('hrhappy.role');
-  const name = () => store.get('hrhappy.name', 'OO');
+  // 로그인 세션은 탭마다 따로 (sessionStorage) → 한 브라우저에서 탭별로 다른 계정 동시 사용 가능
+  // localStorage에는 '로그인 유지' 때 마지막 로그인만 기본값으로 남겨, 새로 연 탭이 그 계정으로 시작하게 함
+  const tab = {
+    get(k, d = '') { try { return sessionStorage.getItem(k) ?? d; } catch { return d; } },
+    set(k, v) { try { sessionStorage.setItem(k, v); } catch {} },
+    del(k) { try { sessionStorage.removeItem(k); } catch {} },
+  };
+  (function adoptDefaultLogin() {
+    if (tab.get('hrhappy.role')) return;
+    const r = store.get('hrhappy.last.role'), n = store.get('hrhappy.last.name');
+    if (r && n) { tab.set('hrhappy.role', r); tab.set('hrhappy.name', n); }
+  })();
+  const role = () => tab.get('hrhappy.role');
+  const name = () => tab.get('hrhappy.name', 'OO');
   const isAdmin = () => role() === 'admin';
   const botName = () => (isAdmin() ? '인사해삐m' : '인사해삐');
   const mascot = () => (isAdmin() ? '/img/chars/rabbit-m.webp' : '/img/chars/rabbit.webp');
@@ -28,18 +40,29 @@ window.HR = (() => {
     document.querySelectorAll('[data-avatar]').forEach((e) => (e.src = charImg()));
   }
 
+  // 챗봇 대화 세션 ID도 탭마다 따로 (두 탭의 대화가 섞이지 않게)
   function sessionId() {
-    let id = store.get('hrhappy.sid');
-    if (!id) { id = Math.random().toString(36).slice(2, 10); store.set('hrhappy.sid', id); }
+    let id = tab.get('hrhappy.sid');
+    if (!id) { id = Math.random().toString(36).slice(2, 10); tab.set('hrhappy.sid', id); }
     return id;
   }
 
-  function login(r, n) { store.set('hrhappy.role', r); store.set('hrhappy.name', n || 'OO'); store.del('hrhappy.sid'); try { sessionStorage.removeItem('hrhappy.bellToast'); } catch {} }
-  function logout() { ['hrhappy.role', 'hrhappy.name', 'hrhappy.sid'].forEach(store.del); try { sessionStorage.removeItem('hrhappy.bellToast'); } catch {} location.href = '/'; }
+  function login(r, n, { keep = true } = {}) {
+    tab.set('hrhappy.role', r); tab.set('hrhappy.name', n || 'OO'); tab.del('hrhappy.sid'); tab.del('hrhappy.bellToast');
+    if (keep) { store.set('hrhappy.last.role', r); store.set('hrhappy.last.name', n || 'OO'); }
+    else { store.del('hrhappy.last.role'); store.del('hrhappy.last.name'); }
+  }
+  function logout() {
+    // 이 탭의 계정이 '로그인 유지' 기본값이면 그것도 지움 (다른 탭의 세션은 그대로)
+    if (store.get('hrhappy.last.role') === role() && store.get('hrhappy.last.name') === name()) { store.del('hrhappy.last.role'); store.del('hrhappy.last.name'); }
+    ['hrhappy.role', 'hrhappy.name', 'hrhappy.sid', 'hrhappy.bellToast'].forEach(tab.del);
+    location.href = '/';
+  }
 
-  // 개인정보 수집·이용 동의 ('Y' | 'N' | '' = 미선택)
-  const consent = () => store.get('hrhappy.consent');
-  function setConsent(v) { store.set('hrhappy.consent', v); }
+  // 개인정보 수집·이용 동의 ('Y' | 'N' | '' = 미선택) — 계정별로 저장
+  const consentKey = () => `hrhappy.consent.${role()}.${name()}`;
+  const consent = () => store.get(consentKey());
+  function setConsent(v) { store.set(consentKey(), v); }
   function requireConsent() {
     if (consent() === 'Y') return true;
     location.replace('/mypage.html?next=chat');
