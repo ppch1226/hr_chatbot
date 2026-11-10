@@ -263,7 +263,7 @@ app.get('/api/history', (req, res) => res.json({ items: userdata.getHistory(user
 app.delete('/api/history/:id', (req, res) => { userdata.deleteHistory(userKey(req.query), req.params.id); res.json({ ok: true }); });
 app.get('/api/grade-stats', (req, res) => res.json({ items: userdata.gradeStats(readProfiles()), note: '시연용 기본 집계에 실제 질문기록(직급 설정 사용자)을 더한 비율' }));
 app.get('/api/calendar', (req, res) => {
-  const month = /^d{4}-d{2}$/.test(req.query.month || '') ? req.query.month : todayKST().slice(0, 7);
+  const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : todayKST().slice(0, 7);
   const regs = notify.listFor(userKey(req.query), req.query.role === 'admin' ? 'admin' : 'employee').filter((n) => n.kind === 'reg-change');
   res.json(userdata.calendar(userKey(req.query), month, regs));
 });
