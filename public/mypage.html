@@ -429,7 +429,7 @@ if (HR.guard()) {
     { group: '', id: 'calendar', icon: 'calendar_month', label: '일정', title: '사내 일정 & 근태 캘린더' },
     { group: '기록', id: 'history', icon: 'history_edu', label: '나의 질문기록', title: '나의 질문기록' },
     ...(admin ? [{ group: '기록', id: 'compliance', icon: 'gavel', label: '정합성 분석 기록', title: '정합성 분석 기록' }] : []),
-    { group: '통계', id: 'stats', icon: 'bar_chart', label: '직급별 질문 통계', title: '직급별 질문 통계' },
+    ...(admin ? [{ group: '통계', id: 'stats', icon: 'bar_chart', label: '직급별 질문 통계', title: '직급별 질문 통계' }] : []), // 직원용에는 통계 메뉴 없음
     { group: '알림', id: 'notif', icon: 'notifications', label: '사규 개정 알림', title: '사규 개정 알림' },
     { group: '알림', id: 'prefs', icon: 'tune', label: '알림 맞춤 설정', title: '알림 맞춤 설정' },
     ...(admin ? [{ group: '관리', id: 'cm', icon: 'verified_user', label: '컴플라이언스 관리', href: '/compliance.html' }] : []),
