@@ -10,7 +10,8 @@
     "eval": "node rag/eval.js",
     "test:sensitive": "node rag/test-sensitive.js",
     "ingest:laws": "node rag/lawsources.js ingest",
-    "seed:demo": "node rag/seed-demo.js"
+    "seed:demo": "node rag/seed-demo.js",
+    "test:visuals": "node rag/test-visuals.js"
   },
   "engines": {
     "node": ">=18"

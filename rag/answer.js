@@ -1,7 +1,7 @@
 /**
  * RAG 답변 생성: 검색 → 근거 블록 구성 → LLM → 출처 정리
  */
-const { search } = require('./retrieve');
+const { search, expandQuery } = require('./retrieve');
 const { embed } = require('./models');
 const { chat, chatStream } = require('./llm');
 const VIS = require('./visuals');
@@ -150,8 +150,8 @@ function contextBlock(evidence) {
 function retrievalQuery(question, history) {
   // 짧은 후속 질문("그럼 3년차는?")은 직전 질문과 합쳐서 검색
   const prev = [...history].reverse().find((m) => m.role === 'user');
-  if (prev && question.length < 25 && /^(그럼|그러면|그건|이건|그 경우|만약|또|그리고|추가로)|\?$|는요\??$/.test(question.trim())) return `${prev.content} ${question}`;
-  return question;
+  if (prev && question.length < 25 && /^(그럼|그러면|그건|이건|그 경우|만약|또|그리고|추가로)|\?$|는요\??$/.test(question.trim())) return expandQuery(`${prev.content} ${question}`);
+  return expandQuery(question);
 }
 
 /**
@@ -238,7 +238,7 @@ async function answer({ question, role = 'employee', sessionId = 'default', anon
         : chat(messages, { maxTokens: 1800 })
     ),
     evidence.length
-      ? timed('llmVisuals', VIS.generate(question, evidence.map((e) => ({ docLabel: `(${e.kind})`, label: e.head, text: e.text })), { ehrCatalog: procedure ? EHR_CATALOG : '' }).catch(() => empty))
+      ? timed('llmVisuals', VIS.generate(question, evidence.map((e) => ({ docLabel: `(${e.kind})`, label: (e.chunk && e.chunk.header) || e.head, text: e.text })), { ehrCatalog: procedure ? EHR_CATALOG : '' }).catch(() => empty))
       : empty,
   ]);
   prof.generation = Date.now() - t1;

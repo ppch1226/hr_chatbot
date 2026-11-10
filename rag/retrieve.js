@@ -82,4 +82,19 @@ async function search(question, { topK = CFG.topK, candidates = CFG.candidates, 
   };
 }
 
-module.exports = { search, detectFilter, CFG };
+// 직원이 쓰는 말 → 규정에 쓰인 말 (검색어에만 덧붙임. 규정 원문에 없는 표현이라 검색이 빗나가는 경우 보완)
+const TERMS = [
+  [/복지\s*포인트|복지\s*카드/, '선택적 복지'],
+  [/야근\s*수당|초과\s*근무\s*수당|연장\s*근무\s*수당|야간\s*수당/, '시간외근무수당'],
+  [/출장비|출장\s*경비/, '여비'],
+  [/월급|급여\s*명세/, '보수'],
+  [/병가/, '인병휴가'],
+  [/육휴/, '육아휴직'],
+  [/출휴/, '출산휴가'],
+];
+function expandQuery(q) {
+  const add = TERMS.filter(([re, term]) => re.test(q) && !q.includes(term)).map(([, term]) => term);
+  return add.length ? `${q} (${add.join(', ')})` : q;
+}
+
+module.exports = { search, detectFilter, expandQuery, CFG };

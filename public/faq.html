@@ -13,19 +13,20 @@
 </head>
 <body class="min-h-screen flex flex-col relative">
 <main class="relative z-20 flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-    <aside class="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-6">
-      <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-100">
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-[#e60012] border border-red-100 mb-4"><span class="material-symbols-outlined text-[15px]">quiz</span>KT IS 사내 HR 가이드</span>
-        <h2 class="text-2xl font-bold text-slate-900 leading-tight mb-3">자주 찾는 질문<br><span class="text-[#e60012]">(FAQ)</span></h2>
-        <p class="text-sm text-slate-600 leading-relaxed">KT IS 임직원들이 가장 자주 문의하는 근태, 휴가, 복지, 급여 규정을 한곳에 정리했습니다. 원하는 답변을 찾지 못하셨다면 언제든 인사해삐 챗봇에 물어보세요.</p>
+  <!-- 왼쪽 카드는 기존 너비의 60% (lg 33%→20%, xl 25%→15%) -->
+  <div class="grid grid-cols-1 lg:grid-cols-[minmax(200px,20%)_minmax(0,1fr)] xl:grid-cols-[minmax(210px,15%)_minmax(0,1fr)] gap-6 lg:gap-7 items-start">
+    <aside class="lg:sticky lg:top-6 min-w-0">
+      <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-[#e60012] border border-red-100 mb-3.5 whitespace-nowrap"><span class="material-symbols-outlined text-[15px]">quiz</span>KT IS 사내 HR 가이드</span>
+        <h2 class="text-xl font-bold text-slate-900 leading-snug mb-2.5 break-keep">자주 찾는 질문<br><span class="text-[#e60012]">(FAQ)</span></h2>
+        <p class="text-[13px] text-slate-600 leading-relaxed break-keep">KT IS 임직원들이 가장 자주 문의하는 근태, 휴가, 복지, 급여 규정을 한곳에 정리했습니다. 원하는 답변을 찾지 못하셨다면 언제든 인사해삐 챗봇에 물어보세요.</p>
         <div class="mt-6 pt-5 border-t border-slate-100">
           <p class="text-xs font-bold text-slate-400 mb-3 px-1">카테고리 바로가기</p>
           <div id="cats" class="flex flex-col space-y-1"></div>
         </div>
       </div>
     </aside>
-    <section class="lg:col-span-8 xl:col-span-9">
+    <section class="min-w-0">
       <div class="bg-white rounded-3xl shadow-xl border border-slate-200/90 p-5 sm:p-8 flex flex-col gap-6 ring-1 ring-black/5">
         <form id="search" class="relative bg-white border-2 border-slate-200 rounded-2xl p-2 sm:p-2.5 flex items-center gap-2 focus-within:border-[#E60012] focus-within:ring-4 focus-within:ring-red-500/10 transition-all">
           <span class="material-symbols-outlined text-slate-400 text-[22px] pl-2">search</span>

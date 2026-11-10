@@ -291,7 +291,7 @@ if (HR.guard() && HR.requireConsent()) {
   }
 
 
-  // ── 시각화 블록 렌더링 (stats / steps / timeline / chart)
+  // ── 시각화 블록 렌더링 (stats / steps / timeline / chart / info)
   const citeTag = (n) => (n ? `<span class="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded bg-red-50 text-[#E60012] text-[9px] font-bold border border-red-200 align-middle">${n}</span>` : '');
   const visTitle = (icon, t) => (t ? `<div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-3"><span class="material-symbols-outlined text-[18px] text-[#E60012]">${icon}</span>${HR.esc(t)}</div>` : '');
   const formulaNote = (f) => (f ? `<div class="mt-2.5 text-[11px] text-slate-500 flex items-start gap-1"><span class="material-symbols-outlined text-[14px] text-slate-400">calculate</span><span>계산식: ${HR.esc(f)}</span></div>` : '');
@@ -333,17 +333,27 @@ if (HR.guard() && HR.requireConsent()) {
         <div class="flex items-center gap-1.5 text-[10px] text-slate-500"><span class="w-0.5 h-3 bg-slate-900"></span>${HR.esc(v.anchor)} (기준일)</div>
       </div>${formulaNote(v.formula)}`;
   }
+  // 숫자 없는 기준(대상·방식·조건·제한)을 아이콘 카드로
+  function visInfo(v) {
+    return `${visTitle('fact_check', v.title)}<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">${v.items.map((x) => `
+      <div class="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+        <span class="w-8 h-8 rounded-lg bg-white border border-red-100 text-[#E60012] flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[18px]">${HR.esc(x.icon)}</span></span>
+        <div class="min-w-0"><div class="text-xs font-bold text-slate-900">${HR.esc(x.label)} ${citeTag(x.cite)}</div>
+          <div class="text-xs text-slate-600 leading-relaxed mt-0.5 break-keep">${HR.esc(x.text)}</div></div>
+      </div>`).join('')}</div>`;
+  }
   let chartSeq = 0;
   function visChart(v) {
     const id = 'vchart-' + ++chartSeq;
-    const h = v.chart === 'range' ? Math.max(140, v.labels.length * 44 + 50) : 240;
+    // 가로 막대·범위는 항목 수만큼 높이를 늘려 이름이 잘리지 않게
+    const h = v.chart === 'range' || v.chart === 'hbar' ? Math.max(140, v.labels.length * 34 + 50) : 240;
     return `${visTitle(v.chart === 'line' ? 'show_chart' : 'bar_chart', v.title)}
       <div style="height:${h}px" class="relative"><canvas id="${id}" data-chart='${HR.esc(JSON.stringify(v))}' aria-label="${HR.esc(v.title)} 그래프" role="img"></canvas></div>
       <div class="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1">${v.unit ? `단위: ${HR.esc(v.unit)}` : ''} ${citeTag(v.cite)}</div>${formulaNote(v.formula)}`;
   }
   function visualsHtml(list) {
     if (!list || !list.length) return '';
-    const render = { stats: visStats, steps: visSteps, timeline: visTimeline, chart: visChart };
+    const render = { stats: visStats, steps: visSteps, timeline: visTimeline, chart: visChart, info: visInfo };
     return list.filter((v) => render[v.type]).map((v) => `<div class="vis rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4">${render[v.type](v)}</div>`).join('');
   }
   // Chart.js는 그래프가 있을 때만 불러옴
@@ -363,11 +373,13 @@ if (HR.guard() && HR.requireConsent()) {
     canvases.forEach((cv) => {
       const v = JSON.parse(cv.dataset.chart);
       const range = v.chart === 'range';
+      const horizontal = range || v.chart === 'hbar';
       const fmt = (n) => Number(n).toLocaleString('ko-KR') + (v.unit ? ' ' + v.unit : '');
       new Chart(cv, {
-        type: range ? 'bar' : v.chart,
+        type: horizontal ? 'bar' : v.chart,
         data: {
-          labels: v.labels,
+          // 가로 막대는 항목 이름 옆에 값을 함께 표시 (마우스를 올리지 않아도 읽히게)
+          labels: v.chart === 'hbar' && v.series.length === 1 ? v.labels.map((l, i) => `${l} · ${Number(v.series[0].data[i]).toLocaleString('ko-KR')}${v.unit || ''}`) : v.labels,
           datasets: v.series.map((s, i) => ({
             label: s.name, data: s.data,
             backgroundColor: range ? 'rgba(230,0,18,0.75)' : i === 0 ? 'rgba(230,0,18,0.85)' : PALETTE[i % 3],
@@ -377,7 +389,7 @@ if (HR.guard() && HR.requireConsent()) {
         },
         options: {
           maintainAspectRatio: false,
-          indexAxis: range ? 'y' : 'x',
+          indexAxis: horizontal ? 'y' : 'x',
           plugins: {
             legend: { display: v.series.length > 1, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
             tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${Array.isArray(c.raw) ? fmt(c.raw[0]) + ' ~ ' + fmt(c.raw[1]) : fmt(c.raw)}` } },
@@ -386,8 +398,8 @@ if (HR.guard() && HR.requireConsent()) {
             // 값 축만 천 단위 콤마 (카테고리 축은 Chart.js 기본 라벨을 그대로 써야 하므로 callback 키를 넣지 않음)
             const valueTicks = { font: { size: 11 }, callback: (n) => Number(n).toLocaleString('ko-KR') };
             const catTicks = { font: { size: 11 } };
-            return range
-              ? { x: { grid: { color: '#F1F5F9' }, ticks: valueTicks }, y: { grid: { display: false }, ticks: catTicks } }
+            return horizontal
+              ? { x: { grid: { color: '#F1F5F9' }, beginAtZero: !range, ticks: valueTicks }, y: { grid: { display: false }, ticks: catTicks } }
               : { x: { grid: { display: false }, ticks: catTicks }, y: { grid: { color: '#F1F5F9' }, beginAtZero: true, ticks: valueTicks } };
           })(),
         },
