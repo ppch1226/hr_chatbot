@@ -35,7 +35,9 @@ ${role === 'admin' ? '사용자는 인사담당자입니다. 규정 근거, 처�
    - 사규가 법령 기준보다 유리하거나 같으면 그대로 안내하고, 사규가 법령보다 불리해 보이면 법령이 우선 적용된다는 점과 인사담당 부서 확인을 안내하세요.
    - 질문과 관련 없는 법령은 언급하지 마세요.${role === 'admin' ? `
    - 판례·행정해석·노동위원회 결정례·행정규칙은 "### 참고 판례·해석" 아래에 사건번호(또는 안건번호)와 요지를 1~2줄씩 정리하고, 이번 사안에 주는 시사점을 덧붙이세요. 질문과 직접 관련 없는 사례는 빼세요.
-   - 판례·해석은 개별 사안의 판단이므로 "구체적 사실관계에 따라 결론이 달라질 수 있어 노무 담당과 검토가 필요하다"는 점을 짧게 밝히세요.` : ''}`;
+   - 판례·해석은 개별 사안의 판단이므로 "구체적 사실관계에 따라 결론이 달라질 수 있어 노무 담당과 검토가 필요하다"는 점을 짧게 밝히세요.` : `
+10. 직원용 답변은 **사규와 법령 조문만** 근거로 합니다. 판례·행정해석·노동위원회 결정·학설은 근거에 없으므로 언급하지 마세요 (일반 지식으로도 인용 금지).
+    사규·법령만으로 판단하기 어려운 해석이 필요한 사안(분쟁, 징계 효력, 위법 여부 판단 등)이면 규정 내용까지만 안내하고 "구체적인 판단은 인사담당 부서에 문의하세요"라고 안내하세요.`}`;
 
 const FOLLOWUP_MARK = '<<<FOLLOWUPS>>>';
 const EHR_MARK = '<<<EHR>>>';
@@ -183,7 +185,8 @@ async function answer({ question, role = 'employee', sessionId = 'default', anon
     timed('regSearch', search(rq, { dense })),
     timed('lawGather', personal ? [] : lawsources.searchLaws(rq, { dense, topK: role === 'admin' ? 3 : 2 }).catch(() => [])),
   ]);
-  const lawRes = { items: lawItems, timing: {} };
+  // 직원용은 사규 + 법령 조문만 근거로 (판례·행정규칙·행정해석·노동위원회는 담당자용 전용)
+  const lawRes = { items: role === 'admin' ? lawItems : lawItems.filter((x) => x.kind === '법령'), timing: {} };
   prof.retrieval = Date.now() - t0;
   if (onEvent) {
     const counts = {};
