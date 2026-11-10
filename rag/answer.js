@@ -167,7 +167,7 @@ async function answer({ question, role = 'employee', sessionId = 'default', anon
   const cached = cacheKey && cacheGet(cacheKey);
   if (cached) {
     if (!anonymous) sessions.set(sessionId, [{ role: 'user', content: question }, { role: 'assistant', content: cached.answer }]);
-    if (onEvent) onEvent({ type: 'delta', text: cached.answer });
+    if (onEvent) { onEvent({ type: 'visuals', visuals: cached.visuals || [] }); onEvent({ type: 'delta', text: cached.answer }); }
     return { ...cached, anonymous, cached: true, elapsed: (Date.now() - t0) / 1000, timing: { cached: true, firstToken: Date.now() - t0 } };
   }
   const personal = PERSONAL.test(question);
@@ -238,7 +238,10 @@ async function answer({ question, role = 'employee', sessionId = 'default', anon
         : chat(messages, { maxTokens: 1800 })
     ),
     evidence.length
-      ? timed('llmVisuals', VIS.generate(question, evidence.map((e) => ({ docLabel: `(${e.kind})`, label: (e.chunk && e.chunk.header) || e.head, text: e.text })), { ehrCatalog: procedure ? EHR_CATALOG : '' }).catch(() => empty))
+      ? timed('llmVisuals', VIS.generate(question, evidence.map((e) => ({ docLabel: `(${e.kind})`, label: (e.chunk && e.chunk.header) || e.head, text: e.text })), { ehrCatalog: procedure ? EHR_CATALOG : '' })
+          .catch(() => empty)
+          // 시각화는 준비되는 즉시 먼저 보냄 → 화면에서 답변 글보다 위에 먼저 표시
+          .then((v) => (onEvent && onEvent({ type: 'visuals', visuals: v.visuals || [] }), v)))
       : empty,
   ]);
   prof.generation = Date.now() - t1;

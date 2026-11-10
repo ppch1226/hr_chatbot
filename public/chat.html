@@ -30,7 +30,7 @@
     </aside>
 
     <section class="flex flex-col min-w-0">
-      <div class="bg-white rounded-3xl shadow-xl border border-slate-200/90 flex flex-col relative overflow-hidden ring-1 ring-black/5 h-[calc(100vh-12rem)] min-h-[620px]">
+      <div id="chat-card" class="bg-white rounded-3xl shadow-xl border border-slate-200/90 flex flex-col relative overflow-hidden ring-1 ring-black/5 h-[calc(100vh-12rem)] min-h-[620px]">
         <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-slate-200/90 flex items-center justify-between bg-white/95">
           <div class="flex items-center gap-4">
             <img data-mascot class="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0" alt="">
@@ -41,6 +41,7 @@
           </div>
           <div class="flex items-center gap-1.5">
             <div id="weather" class="hidden sm:flex items-center gap-1.5 h-9 px-3 mr-1 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600 whitespace-nowrap"></div>
+            <button id="btn-full" type="button" title="전체 화면으로 보기" aria-pressed="false" class="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-[#E60012] text-slate-500 flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">open_in_full</span></button>
             <button id="btn-reset" title="새 대화 시작" class="w-9 h-9 rounded-xl hover:bg-red-50 hover:text-[#E60012] text-slate-500 flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">refresh</span></button>
           </div>
         </div>
@@ -197,16 +198,45 @@ if (HR.guard() && HR.requireConsent()) {
   }
   // 스트리밍 중 답변 미리보기 (완료되면 전체 카드로 교체)
   let liveText = '', liveTimer = null;
-  function showLive() {
+  // 스트리밍 중 답변 카드: 위에 시각화 자리(준비되면 먼저 표시), 아래에 답변 글
+  let liveVisuals = null; // null = 아직 준비 중, [] = 없음
+  function liveBubble() {
     const box = stream.querySelector('.typing');
-    if (!box) return;
+    if (!box) return null;
     let bubble = box.querySelector('.live');
     if (!bubble) {
-      box.querySelector('.typing-card').outerHTML = `<div class="live flex-1 min-w-0 max-w-2xl bg-white rounded-2xl rounded-tl-xs p-5 sm:p-6 border border-slate-200 shadow-sm">
+      box.querySelector('.typing-card').outerHTML = `<div class="live flex-1 min-w-0 max-w-2xl bg-white rounded-2xl rounded-tl-xs p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+        <div class="live-vis space-y-4"></div>
         <div class="md text-sm sm:text-[15px] text-slate-800"></div>
-        <div class="mt-3 flex items-center gap-1.5 text-[11px] text-slate-400"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ml-1">답변을 작성하고 있어요 · 근거·시각화는 완료 후 표시</span></div></div>`;
+        <div class="flex items-center gap-1.5 text-[11px] text-slate-400"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ml-1 live-note">답변을 작성하고 있어요 · 근거는 완료 후 표시</span></div></div>`;
       bubble = box.querySelector('.live');
+      paintLiveVisuals();
     }
+    return bubble;
+  }
+  function paintLiveVisuals() {
+    const slot = stream.querySelector('.typing .live-vis');
+    if (!slot) return;
+    if (liveVisuals === null) {
+      // 시각화 준비 중 자리 (도표가 글보다 먼저 자리를 잡아, 나중에 글이 밀리지 않게)
+      slot.innerHTML = `<div class="vis-skel rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4 flex items-center gap-2 text-xs text-slate-400 animate-pulse"><span class="material-symbols-outlined text-[18px]">insert_chart</span>도표를 준비하고 있어요…</div>`;
+    } else {
+      slot.innerHTML = visualsHtml(liveVisuals);
+      drawCharts(slot);
+    }
+  }
+  // 글이 먼저 와도 시각화가 준비될 때까지 최대 HOLD ms 기다렸다가 표시 → 도표가 먼저, 글이 그다음
+  const HOLD = 3000;
+  let firstDeltaAt = null, holdTimer = null;
+  function showLive() {
+    if (liveVisuals === null && firstDeltaAt && Date.now() - firstDeltaAt < HOLD) {
+      setTypingText('도표를 준비하고 있어요…');
+      if (!holdTimer) holdTimer = setTimeout(() => { holdTimer = null; showLive(); }, HOLD - (Date.now() - firstDeltaAt));
+      return;
+    }
+    clearTimeout(holdTimer); holdTimer = null;
+    const bubble = liveBubble();
+    if (!bubble) return;
     bubble.querySelector('.md').innerHTML = HR.md(liveText);
     scroll();
   }
@@ -221,11 +251,20 @@ if (HR.guard() && HR.requireConsent()) {
     const dec = new TextDecoder();
     let buf = '', final = null;
     liveText = '';
+    liveVisuals = null;
+    firstDeltaAt = null; clearTimeout(holdTimer); holdTimer = null;
     const handle = (e) => {
       if (e.type === 'stage' && e.stage === 'retrieved') {
         const parts = Object.entries(e.counts || {}).map(([k, n]) => `${k} ${n}건`);
         setTypingText(parts.length ? `근거를 찾았어요 (${parts.join(' · ')}) · 답변을 작성하고 있어요…` : '답변을 작성하고 있어요…');
+      } else if (e.type === 'visuals') {
+        // 시각화가 먼저 준비되면 답변 카드를 바로 열어 맨 위에 표시
+        liveVisuals = Array.isArray(e.visuals) ? e.visuals : [];
+        if (liveVisuals.length) { liveBubble(); paintLiveVisuals(); scroll(); }
+        else paintLiveVisuals();
+        if (liveText) showLive(); // 기다리던 글을 이어서 표시
       } else if (e.type === 'delta') {
+        if (!firstDeltaAt) firstDeltaAt = Date.now();
         liveText += e.text;
         if (!liveTimer) liveTimer = setTimeout(() => { liveTimer = null; showLive(); }, 60);
       } else if (e.type === 'done') final = e;
@@ -579,6 +618,33 @@ if (HR.guard() && HR.requireConsent()) {
   }
 
   document.getElementById('ask').addEventListener('submit', (e) => { e.preventDefault(); send(); });
+  // 전체 화면 보기: 챗봇 카드를 창 전체로 펼침 (버튼 또는 Esc로 원래대로)
+  // 카드를 body 바로 아래로 옮겨서 펼침 (main의 쌓임 순서·위치 기준에 묶이지 않게), 닫으면 원래 자리로
+  const chatCard = document.getElementById('chat-card'), fullBtn = document.getElementById('btn-full');
+  const cardHome = document.createComment('chat-card-home');
+  chatCard.before(cardHome);
+  let isFull = false;
+  function setFull(on) {
+    isFull = on;
+    let dim = document.getElementById('chat-dim');
+    if (on) {
+      if (!dim) { document.body.insertAdjacentHTML('beforeend', '<div id="chat-dim" style="position:fixed;inset:0;z-index:65" class="bg-slate-900/40 backdrop-blur-sm"></div>'); document.getElementById('chat-dim').onclick = () => setFull(false); }
+      document.body.appendChild(chatCard);
+      const gap = innerWidth < 640 ? 8 : 20;
+      Object.assign(chatCard.style, { position: 'fixed', top: gap + 'px', right: gap + 'px', bottom: gap + 'px', left: gap + 'px', zIndex: 70, height: 'auto', minHeight: '0' });
+    } else {
+      cardHome.after(chatCard);
+      ['position', 'top', 'right', 'bottom', 'left', 'zIndex', 'height', 'minHeight'].forEach((k) => (chatCard.style[k] = ''));
+      if (dim) dim.remove();
+    }
+    document.body.style.overflow = on ? 'hidden' : '';
+    fullBtn.setAttribute('aria-pressed', on);
+    fullBtn.title = on ? '전체 화면 닫기 (Esc)' : '전체 화면으로 보기';
+    fullBtn.querySelector('span').textContent = on ? 'close_fullscreen' : 'open_in_full';
+    scroll(); qInput.focus();
+  }
+  fullBtn.onclick = () => setFull(!isFull);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isFull) setFull(false); });
   document.getElementById('btn-reset').onclick = async () => {
     await HR.api('/api/chat', { method: 'POST', body: { role: admin ? 'admin' : 'employee', sessionId: HR.sessionId(), reset: true } }).catch(() => {});
     welcome(); showDefaultChips(); HR.toast('새 대화를 시작합니다.');
